@@ -1,0 +1,11 @@
+.node_module/
+node_modules/
+.env
+.env.local
+dist/
+build/
+logs/
+uploads/
+qr_*.png
+*.log
+.DS_Store

@@ -1,0 +1,4 @@
+export const ZALO_QUEUE_CONCURRENCY = 1;
+export const ZALO_QUEUE_INTERVAL_CAP = 15;
+export const ZALO_QUEUE_INTERVAL = 60000;
+

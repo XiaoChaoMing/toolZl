@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zalo Service - Quản Lý Bạn Bè</title>
+  <!-- Tailwind CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <!-- Alpine.js CDN -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-700 py-8 px-4">
+  <div class="max-w-5xl mx-auto space-y-6" x-data="zaloUi()" x-init="init()">
+    <!-- Header -->
+    <header class="text-center text-white">
+      <h1 class="text-3xl md:text-4xl font-bold mb-2 drop-shadow">
+        🔵 Zalo Service
+      </h1>
+      <p class="text-sm md:text-base text-indigo-100">
+        Quản lý kết nối Zalo, quét QR đăng nhập và xử lý gửi tin nhắn từ file
+        Excel
+      </p>
+    </header>
+
+    <!-- Status Card -->
+    <section class="bg-white backdrop-blur rounded-2xl shadow-xl p-5 md:p-6">
+      <div class="flex items-center justify-between gap-4 mb-3">
+        <div>
+          <h2 class="text-lg md:text-xl font-semibold text-gray-800">
+            Trạng Thái Kết Nối
+          </h2>
+          <p class="text-sm text-gray-500">
+            Kiểm tra trạng thái server và kết nối Zalo hiện tại
+          </p>
+        </div>
+        <button type="button"
+          class="inline-flex items-center gap-2 rounded-lg bg-gray-800 text-white text-sm font-medium px-3 py-2 hover:bg-gray-900 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          x-on:click="refreshAll" x-bind:disabled="loading.status">
+          <span x-show="!loading.status">🔄 Làm Mới</span>
+          <span x-show="loading.status">Đang kiểm tra...</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Server status -->
+        <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+          <div>
+            <p class="text-sm text-gray-500">Server</p>
+            <p class="text-base font-semibold text-gray-800">
+              API Backend
+            </p>
+          </div>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold" x-bind:class="{
+                'bg-yellow-100 text-yellow-800': serverStatus.state === 'loading',
+                'bg-green-100 text-green-800': serverStatus.state === 'ok',
+                'bg-red-100 text-red-800': serverStatus.state === 'error'
+              }" x-text="
+                serverStatus.state === 'loading'
+                  ? 'Đang kiểm tra...'
+                  : serverStatus.state === 'ok'
+                  ? 'Hoạt động'
+                  : 'Lỗi kết nối'
+              "></span>
+        </div>
+
+        <!-- Zalo status -->
+        <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+          <div>
+            <p class="text-sm text-gray-500">Zalo Service</p>
+            <p class="text-base font-semibold text-gray-800">
+              Phiên đăng nhập Zalo
+            </p>
+          </div>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold" x-bind:class="{
+                'bg-yellow-100 text-yellow-800': zalo.state === 'loading',
+                'bg-green-100 text-green-800': zalo.state === 'connected',
+                'bg-red-100 text-red-800': zalo.state === 'disconnected'
+              }" x-text="
+                zalo.state === 'loading'
+                  ? 'Đang kiểm tra...'
+                  : zalo.state === 'connected'
+                  ? 'Đã kết nối'
+                  : 'Chưa kết nối'
+              "></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- QR + Excel grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- QR Card -->
+      <section class="bg-white backdrop-blur rounded-2xl shadow-xl p-5 md:p-6 flex flex-col">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <h2 class="text-lg md:text-xl font-semibold text-gray-800">
+              📱 Quét Mã QR Để Đăng Nhập
+            </h2>
+            <p class="text-sm text-gray-500">
+              Mở Zalo trên điện thoại để quét mã QR bên dưới
+            </p>
+          </div>
+          <!-- Tạm thời ẩn nút tải lại QR -->
+          <button type="button"
+            x-on:click="regenerateQr" x-bind:disabled="qr.loading">
+            <span>🔄 Tải Lại QR</span>
+          </button>
+        </div>
+
+        <div class="flex-1 flex flex-col items-center justify-center mt-4 space-y-4">
+          <!-- Loading -->
+          <template x-if="qr.loading">
+            <div class="text-sm text-gray-500 flex flex-col items-center">
+              <svg class="animate-spin h-8 w-8 text-indigo-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 00-8 8h4z">
+                </path>
+              </svg>
+              <span>Đang tải mã QR...</span>
+            </div>
+          </template>
+
+          <!-- QR Image -->
+          <img x-show="!qr.loading && qr.imgUrl" x-bind:src="qr.imgUrl" alt="Mã QR đăng nhập Zalo"
+            class="max-w-xs w-full border-2 border-indigo-500 rounded-xl shadow-md" />
+
+          <!-- Error -->
+          <template x-if="qr.error">
+            <div class="w-full rounded-xl border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700"
+              x-text="`Lỗi: ${qr.error}`"></div>
+          </template>
+
+          <p class="text-xs text-gray-400 text-center">
+            Mã QR có thể hết hạn sau vài phút. Nếu quét không được, hãy nhấn
+            \"Tải Lại QR\".
+          </p>
+        </div>
+      </section>
+
+      <!-- Excel Card -->
+      <section class="bg-white backdrop-blur rounded-2xl shadow-xl p-5 md:p-6 flex flex-col">
+        <div class="mb-4">
+          <h2 class="text-lg md:text-xl font-semibold text-gray-800">
+            📊 Xử Lý File Excel
+          </h2>
+          <p class="text-sm text-gray-500 mt-1">
+            Tải lên file Excel chứa danh sách số điện thoại để tìm user và
+            gửi tin nhắn tự động.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+
+          <!-- Session Lock Banner -->
+          <div x-show="isExcelSessionActive"
+            class="rounded-xl border-l-4 border-indigo-500 bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+            <div class="font-semibold">🔒 Đang trong phiên xử lý</div>
+            <div class="text-xs text-indigo-800/80 mt-1">
+              Không thể upload file Excel/media mới cho đến khi phiên hiện tại kết thúc hoặc bạn bấm Dừng/Xoá.
+            </div>
+          </div>
+
+
+          <!-- Retry Delay for Rate Limit -->
+          <div class="space-y-1.5">
+            <label for="retryDelayInput" class="block text-sm font-medium text-gray-700">
+              ⏱️ Thời gian chờ khi bị Rate Limit
+            </label>
+            <input id="retryDelayInput" type="number" min="1" max="6000" step="1" inputmode="numeric"
+              class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="20 (phút)" x-model.number="excel.retryDelayMinutes"
+              x-on:input="
+                // Force integer-only input (no decimals)
+                const raw = ($event.target.value ?? '').toString();
+                const digitsOnly = raw.replace(/[^\d]/g, '');
+                const next = digitsOnly === '' ? '' : String(parseInt(digitsOnly, 10));
+                $event.target.value = next;
+                excel.retryDelayMinutes = next === '' ? null : Number(next);
+              " />
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <span class="text-xs text-gray-400 mr-1">
+                Chọn nhanh:
+              </span>
+              <button type="button"
+                class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
+                x-on:click="excel.retryDelayMinutes = 15">
+                15 phút
+              </button>
+              <button type="button"
+                class="px-2.5 py-1 rounded-full border border-indigo-200 text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+                x-on:click="excel.retryDelayMinutes = 20">
+                20 phút (khuyến nghị)
+              </button>
+              <button type="button"
+                class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
+                x-on:click="excel.retryDelayMinutes = 30">
+                30 phút
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">
+              Khi gặp lỗi rate limit, hệ thống sẽ tự động tạm dừng và tiếp tục sau thời gian này.
+            </p>
+          </div>
+
+          <!-- Task Delay Interval -->
+          <div class="space-y-1.5">
+            <label for="taskDelayInput" class="block text-sm font-medium text-gray-700">
+              ⏱️ Khoảng cách giữa các task
+            </label>
+            <input id="taskDelayInput" type="number" min="0" max="6000" step="1" inputmode="numeric"
+              class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="3 (giây)" x-model.number="excel.taskDelaySeconds"
+              x-on:input="
+                // Force integer-only input (no decimals)
+                const raw = ($event.target.value ?? '').toString();
+                const digitsOnly = raw.replace(/[^\d]/g, '');
+                const next = digitsOnly === '' ? '' : String(parseInt(digitsOnly, 10));
+                $event.target.value = next;
+                excel.taskDelaySeconds = next === '' ? null : Number(next);
+              " />
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <span class="text-xs text-gray-400 mr-1">
+                Chọn nhanh:
+              </span>
+              <button type="button"
+                class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
+                x-on:click="excel.taskDelaySeconds = 0">
+                0s (Batch)
+              </button>
+              <button type="button"
+                class="px-2.5 py-1 rounded-full border border-indigo-200 text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+                x-on:click="excel.taskDelaySeconds = 3">
+                3 giây (khuyến nghị)
+              </button>
+              <button type="button"
+                class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
+                x-on:click="excel.taskDelaySeconds = 5">
+                5 giây
+              </button>
+              <button type="button"
+                class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
+                x-on:click="excel.taskDelaySeconds = 10">
+                10 giây
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">
+              Thời gian chờ giữa mỗi task. 0 = batch processing (nhanh nhưng dễ rate limit), 3+ giây = sequential (chậm
+              hơn nhưng an toàn).
+            </p>
+          </div>
+
+          <!-- Timeout mỗi tin nhắn: sử dụng giá trị mặc định phía server (2 phút) -->
+
+          <!-- Custom Message -->
+          <div class="space-y-1.5">
+            <label for="messageInput" class="block text-sm font-medium text-gray-700">
+              💬 Nội dung tin nhắn
+            </label>
+            <textarea id="messageInput" rows="4"
+              class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Nhập nhiều tin nhắn, phân cách bằng dấu | (ví dụ: Tin nhắn 1 | Tin nhắn 2 | Tin nhắn 3)" x-model="excel.message"></textarea>
+            <p class="text-xs text-gray-400 mt-1">
+              Nhập nhiều tin nhắn, phân cách bằng dấu <code class="bg-gray-100 px-1 rounded">|</code>. Hệ thống sẽ chọn ngẫu nhiên một tin nhắn cho mỗi người nhận. Nếu để trống, sẽ sử dụng tin nhắn mặc định.
+            </p>
+          </div>
+
+          <!-- Media Files Upload (Optional) -->
+          <div class="space-y-1.5">
+            <label for="excelMediaFiles" class="block text-sm font-medium text-gray-700">
+              📸 Chọn Hình Ảnh/Video (Tùy chọn)
+            </label>
+            <input id="excelMediaFiles" type="file" multiple accept="image/*,video/*"
+              class="block w-full text-sm text-gray-700 border border-gray-200 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              x-bind:disabled="excel.loading || isExcelSessionActive"
+              x-on:change="handleExcelMediaChange($event)" />
+            <p class="text-xs text-gray-400">
+              Tối đa 10 files, mỗi file 50MB. Nếu có, sẽ gửi kèm với tin nhắn cho tất cả người nhận.
+            </p>
+          </div>
+
+          <!-- File input -->
+          <div class="space-y-1.5">
+            <label for="excelFile" class="block text-sm font-medium text-gray-700">Chọn file Excel</label>
+            <input id="excelFile" type="file" accept=".xlsx,.xls"
+              class="block w-full text-sm text-gray-700 border border-gray-200 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              x-bind:disabled="excel.loading || isExcelSessionActive"
+              x-on:change="handleFileChange($event)" />
+            <p class="text-xs text-gray-400">
+              Hỗ trợ định dạng .xlsx, .xls. Cột đầu tiên là số điện thoại.
+            </p>
+          </div>
+
+          <!-- Media Preview -->
+          <div x-show="excel.mediaFiles.length > 0" class="grid grid-cols-3 md:grid-cols-5 gap-2">
+            <template x-for="(file, index) in excel.mediaFiles" :key="index">
+              <div class="relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-50 p-1">
+                <div class="aspect-square flex items-center justify-center bg-gray-100 rounded text-xs">
+                  <template x-if="file.type.startsWith('image/')">
+                    <img :src="file.preview" :alt="file.name" class="w-full h-full object-cover rounded" />
+                  </template>
+                  <template x-if="file.type.startsWith('video/')">
+                    <span class="text-gray-500">🎬</span>
+                  </template>
+                </div>
+                <button type="button"
+                  class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
+                  x-on:click="removeExcelMediaFile(index)">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </template>
+          </div>
+
+
+
+          <!-- Actions -->
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <button type="button"
+              class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 shadow-md hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              x-on:click="processExcel" x-bind:disabled="excel.loading || isExcelSessionActive">
+              <span x-show="!excel.loading">📤 Bắt Đầu Xử Lý</span>
+              <span x-show="excel.loading">Đang xử lý...</span>
+            </button>
+
+            <button type="button"
+              class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              x-on:click="resetExcelForm" x-bind:disabled="excel.loading">
+              ❌ Xoá
+            </button>
+          </div>
+
+          <!-- Loading -->
+          <template x-if="excel.loading">
+            <div class="flex items-center gap-2 text-sm text-gray-500 pt-1">
+              <svg class="animate-spin h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 00-8 8h4z">
+                </path>
+              </svg>
+              <span>Đang tải lên và xử lý file...</span>
+            </div>
+          </template>
+
+          <!-- Warning Banner -->
+          <template x-if="excel.warning">
+            <div class="mt-2 rounded-xl border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <div class="font-semibold mb-1">⚠️ Cảnh báo</div>
+              <div x-text="excel.warning"></div>
+            </div>
+          </template>
+
+          <!-- Progress -->
+          <div
+            x-show="excel.jobId && (excel.status === 'running' || excel.status === 'pending' || excel.status === 'paused' || excel.status === 'cancelled')"
+            class="pt-2 space-y-2">
+            <div class="flex items-center justify-between text-xs text-gray-500">
+              <span>
+                Tiến độ:
+                <span class="font-semibold text-gray-700" x-text="`${excel.processed}/${excel.totalPhones}`"></span>
+              </span>
+              <span
+                x-text="excel.totalPhones ? `${Math.floor((excel.processed / excel.totalPhones) * 100)}%` : '0%'"></span>
+            </div>
+            <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-600 transition-all"
+                x-bind:style="`width: ${excel.totalPhones ? (excel.processed / excel.totalPhones) * 100 : 0}%`"></div>
+            </div>
+            <div class="text-xs text-gray-500">
+              Đang xác minh:
+              <span class="font-mono text-gray-700" x-text="excel.currentPhone || 'Đang chuẩn bị...'"></span>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="flex flex-wrap items-center gap-2 pt-2">
+              <button x-show="excel.status === 'running'" type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition"
+                x-on:click="pauseJob">
+                ⏸️ Tạm dừng
+              </button>
+              <button x-show="excel.status === 'paused'" type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition"
+                x-on:click="resumeJob">
+                ▶️ Tiếp tục
+              </button>
+              <button x-show="excel.status === 'running' || excel.status === 'paused'" type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition"
+                x-on:click="cancelJob">
+                ⏹️ Dừng
+              </button>
+              <a x-show="excel.downloadUrl && (excel.status === 'running' || excel.status === 'paused' || excel.status === 'cancelled' || excel.status === 'completed')"
+                class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
+                x-bind:href="excel.downloadUrl" download>
+                📥 Tải file kết quả hiện tại
+              </a>
+            </div>
+
+            <!-- Countdown Timer for Auto-Resume -->
+            <div x-show="excel.status === 'paused' && excel.pausedUntil"
+              class="mt-3 rounded-xl border-l-4 border-amber-500 bg-amber-50 px-4 py-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-sm font-semibold text-amber-800">
+                    ⏸️ Đang tạm dừng do rate limit
+                  </div>
+                  <div class="text-xs text-amber-700 mt-1">
+                    Hệ thống sẽ tự động tiếp tục sau:
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-2xl font-bold text-amber-800 font-mono" x-text="countdown.display">
+                    --:--
+                  </div>
+                  <div class="text-xs text-amber-600">
+                    còn lại
+                  </div>
+                </div>
+              </div>
+              <div class="mt-2 flex items-center justify-between text-xs text-amber-700">
+                <span x-text="`Đã retry: ${excel.retryCount || 0} lần`"></span>
+                <button type="button"
+                  class="px-2 py-1 rounded bg-amber-200 text-amber-900 hover:bg-amber-300 transition text-xs font-medium"
+                  x-on:click="resumeJob">
+                  ▶️ Resume ngay
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error -->
+          <template x-if="excel.error">
+            <div class="mt-2 rounded-xl border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700"
+              x-text="excel.error"></div>
+          </template>
+
+          <!-- Result -->
+          <template x-if="excel.result">
+            <div
+              class="mt-2 rounded-xl border-l-4 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 space-y-2">
+              <div class="font-semibold">✅ Xử lý thành công!</div>
+              <div class="text-xs text-emerald-900/80">
+                Thống kê:
+              </div>
+              <ul class="grid grid-cols-2 gap-1 text-xs">
+                <li>
+                  Tổng số:
+                  <span class="font-semibold" x-text="excel.result.stats.total"></span>
+                </li>
+                <li>
+                  Tìm thấy:
+                  <span class="font-semibold" x-text="excel.result.stats.found"></span>
+                </li>
+                <li>
+                  Không tìm thấy:
+                  <span class="font-semibold" x-text="excel.result.stats.notFound"></span>
+                </li>
+                <li>
+                  Gửi thành công:
+                  <span class="font-semibold" x-text="excel.result.stats.sendMessageSuccess"></span>
+                </li>
+                <li>
+                  Gửi thất bại:
+                  <span class="font-semibold" x-text="excel.result.stats.sendMessageFailed"></span>
+                </li>
+                <li>
+                  Lỗi khác:
+                  <span class="font-semibold" x-text="excel.result.stats.error"></span>
+                </li>
+              </ul>
+
+              <div class="pt-2">
+                <a class="inline-flex items-center gap-2 text-sm font-medium text-indigo-700 hover:text-indigo-900 hover:underline"
+                  x-bind:href="excel.downloadUrl || excel.result.downloadUrl" download>
+                  📥 Tải file kết quả
+                </a>
+              </div>
+            </div>
+          </template>
+
+          <!-- History -->
+          <div class="pt-3">
+            <div class="text-sm font-semibold text-gray-800">📂 Lịch sử file kết quả</div>
+            <div class="text-xs text-gray-500 mt-1">Danh sách các phiên xử lý Excel gần đây và file kết quả tương ứng.</div>
+
+            <div class="mt-2 space-y-2" x-show="excel.history && excel.history.length > 0">
+              <template x-for="item in excel.history" :key="item.id">
+                <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                  <div class="min-w-0">
+                    <div class="text-xs text-gray-500">Job</div>
+                    <div class="text-xs font-mono text-gray-700 truncate" x-text="item.id"></div>
+                    <div class="text-xs text-gray-500 mt-0.5">
+                      Trạng thái: <span class="font-semibold text-gray-700" x-text="item.status"></span>
+                    </div>
+                  </div>
+                  <a x-show="item.downloadUrl"
+                    class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
+                    :href="item.downloadUrl" download>
+                    📥 Tải xuống
+                  </a>
+                </div>
+              </template>
+            </div>
+
+            <div class="mt-2 text-xs text-gray-400" x-show="!excel.history || excel.history.length === 0">
+              Chưa có file kết quả nào.
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+
+  </div>
+
+  <script>
+    function zaloUi() {
+      const API_BASE = window.location.origin;
+      let currentQrUrl = null;
+
+      return {
+        loading: {
+          status: false,
+        },
+        serverStatus: {
+          state: "loading", // 'loading' | 'ok' | 'error'
+        },
+        zalo: {
+          state: "loading", // 'loading' | 'connected' | 'disconnected'
+        },
+        qr: {
+          loading: true,
+          error: null,
+          imgUrl: null,
+        },
+        excel: {
+          file: null,
+          mediaFiles: [],
+          message: "Chào anh/chị 👋 Em xin phép được giới thiệu một sản phẩm/dịch vụ có thể phù hợp với anh/chị.", // NEW: Default message
+          retryDelayMinutes: 20, // NEW: Default 20 minutes
+          taskDelaySeconds: 3, // NEW: Default 3 seconds delay between tasks
+          loading: false,
+          error: null,
+          result: null, // legacy (will be replaced by job polling)
+          jobId: null,
+          status: null, // running | paused | completed | failed | cancelled
+          history: [], // NEW: List of result files/jobs
+          totalPhones: 0,
+          processed: 0,
+          currentPhone: null,
+          downloadUrl: null,
+          warning: null,
+          // NEW: Auto-resume tracking
+          pausedUntil: null,
+          pauseReason: null,
+          retryDelay: 20 * 60 * 1000,
+          retryCount: 0,
+        },
+        // NEW: Countdown state
+        countdown: {
+          display: '--:--',
+          remainingSeconds: 0,
+        },
+        pollTimer: null,
+        countdownTimer: null, // NEW: Countdown interval
+        get isExcelSessionActive() {
+          return this.excel && ["running", "pending", "paused"].includes(this.excel.status);
+        },
+
+        init() {
+          this.refreshAll();
+          this.loadExcelHistory();
+        },
+
+        async loadExcelHistory() {
+          try {
+            const resp = await fetch(`${API_BASE}/api/jobs`);
+            const data = await resp.json();
+            if (!resp.ok || !data || !data.success || !Array.isArray(data.jobs)) return;
+            this.excel.history = data.jobs
+              .filter(j => j && j.type === 'excel')
+              .map(j => ({
+                id: String(j.id),
+                status: j.status,
+                createdAt: j.createdAt,
+                updatedAt: j.updatedAt,
+                downloadUrl: j.downloadUrl || null,
+                stats: j.stats || null,
+              }));
+          } catch {
+            // ignore
+          }
+        },
+
+        async refreshAll() {
+          this.loading.status = true;
+          await Promise.all([this.checkStatus(), this.loadQr()]);
+          this.loading.status = false;
+        },
+
+        async loadQr() {
+          this.qr.loading = true;
+          this.qr.error = null;
+
+          try {
+            const timestamp = Date.now();
+            const response = await fetch(`${API_BASE}/qr?t=${timestamp}`);
+
+            if (!response.ok) {
+              let message = "Không thể tải mã QR";
+              try {
+                const data = await response.json();
+                if (data && data.message) message = data.message;
+              } catch { }
+              throw new Error(message);
+            }
+
+            const blob = await response.blob();
+            if (currentQrUrl) {
+              URL.revokeObjectURL(currentQrUrl);
+            }
+            currentQrUrl = URL.createObjectURL(blob);
+            this.qr.imgUrl = currentQrUrl;
+          } catch (error) {
+            console.error("Lỗi tải QR:", error);
+            this.qr.error =
+              error && error.message
+                ? error.message
+                : "Không thể tải mã QR. Vui lòng thử lại.";
+            // Propagate error so caller (regenerate) can retry
+            throw error;
+          } finally {
+            this.qr.loading = false;
+          }
+        },
+
+        async regenerateQr() {
+          this.qr.loading = true;
+          this.qr.error = null;
+          try {
+            const resp = await fetch(`${API_BASE}/zalo/qr/regenerate`, {
+              method: "POST",
+            });
+            const data = await resp.json().catch(() => null);
+            if (!resp.ok || !data || !data.success) {
+              throw new Error((data && data.message) || "Không thể tạo QR mới");
+            }
+            // After server regenerates QR, load the new image (retry a bit in case file is not ready)
+            let lastErr = null;
+            for (let i = 0; i < 8; i++) {
+              try {
+                await this.loadQr();
+                lastErr = null;
+                break;
+              } catch (e) {
+                lastErr = e;
+                await new Promise((r) => setTimeout(r, 250));
+              }
+            }
+            if (lastErr) throw lastErr;
+          } catch (error) {
+            console.error("Lỗi regenerate QR:", error);
+            this.qr.error =
+              error && error.message
+                ? error.message
+                : "Không thể tạo QR mới. Vui lòng thử lại.";
+          } finally {
+            this.qr.loading = false;
+          }
+        },
+
+        async checkStatus() {
+          this.serverStatus.state = "loading";
+          this.zalo.state = "loading";
+
+          try {
+            const serverResponse = await fetch(`${API_BASE}/health`);
+            if (!serverResponse.ok) throw new Error("Health check failed");
+            await serverResponse.json();
+            this.serverStatus.state = "ok";
+          } catch (error) {
+            console.error("Lỗi kiểm tra server:", error);
+            this.serverStatus.state = "error";
+          }
+
+          try {
+            const zaloResponse = await fetch(`${API_BASE}/zalo/status`);
+            if (!zaloResponse.ok) throw new Error("Zalo status failed");
+            const zaloData = await zaloResponse.json();
+
+            if (zaloData.initialized && zaloData.api === "available") {
+              this.zalo.state = "connected";
+            } else {
+              this.zalo.state = "disconnected";
+            }
+          } catch (error) {
+            console.error("Lỗi kiểm tra Zalo:", error);
+            this.zalo.state = "disconnected";
+          }
+        },
+
+        handleFileChange(event) {
+          if (this.isExcelSessionActive) return;
+          const files = event.target.files;
+          this.excel.file = files && files[0] ? files[0] : null;
+        },
+
+        async processExcel() {
+          this.excel.error = null;
+          this.excel.result = null;
+          this.excel.jobId = null;
+          this.excel.status = null;
+          this.excel.totalPhones = 0;
+          this.excel.processed = 0;
+          this.excel.currentPhone = null;
+          this.excel.downloadUrl = null;
+
+          if (!this.excel.file) {
+            this.excel.error = "Vui lòng chọn file Excel trước khi xử lý.";
+            return;
+          }
+
+          this.excel.loading = true;
+
+          try {
+            const formData = new FormData();
+            formData.append("file", this.excel.file);
+            // NEW: Send retry delay for rate limit handling
+            const retryDelayMs = (this.excel.retryDelayMinutes || 20) * 60 * 1000;
+            formData.append("retryDelay", String(retryDelayMs));
+            // NEW: Send task delay interval
+            let seconds = Number(this.excel.taskDelaySeconds);
+            if (!Number.isFinite(seconds)) {
+              seconds = 3;
+            }
+            // Allow up to 600s (10 minutes), keep integer seconds
+            seconds = Math.max(0, Math.min(600, Math.floor(seconds)));
+            const taskDelayMs = seconds * 1000;
+            // Debug help: verify UI input -> payload
+            // eslint-disable-next-line no-console
+            console.log("[processExcel] taskDelaySeconds=", this.excel.taskDelaySeconds, "taskDelayMs=", taskDelayMs);
+            formData.append("taskDelay", String(taskDelayMs));
+            // NEW: Send custom message (will be parsed by backend as array separated by |)
+            formData.append("message", this.excel.message || "");
+            // Append media files if any
+            this.excel.mediaFiles.forEach(fileObj => {
+              formData.append("media", fileObj.file);
+            });
+
+            const response = await fetch(`${API_BASE}/api/process-excel`, {
+              method: "POST",
+              body: formData,
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data && data.success && data.jobId) {
+              this.excel.jobId = String(data.jobId);
+              this.excel.totalPhones = Number(data.totalPhones ?? 0);
+              this.excel.status = "running";
+              await this.startPollingJob();
+            } else {
+              const message =
+                (data && data.message) ||
+                "Lỗi xử lý file. Vui lòng thử lại sau.";
+              this.excel.error = message;
+            }
+          } catch (error) {
+            console.error("Lỗi xử lý Excel:", error);
+            this.excel.error =
+              "Lỗi kết nối đến server. Vui lòng thử lại sau.";
+          } finally {
+            this.excel.loading = false;
+          }
+        },
+
+        async startPollingJob() {
+          if (!this.excel.jobId) return;
+
+          if (this.pollTimer) {
+            clearInterval(this.pollTimer);
+            this.pollTimer = null;
+          }
+
+          const pollOnce = async () => {
+            try {
+              const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}`);
+              const data = await resp.json();
+
+              if (!resp.ok || !data || !data.success || !data.job) {
+                return;
+              }
+
+              const job = data.job;
+              this.excel.status = job.status;
+              this.excel.totalPhones = Number(job.totalPhones ?? 0);
+              this.excel.processed = Number(job.processed ?? 0);
+              this.excel.currentPhone = job.currentPhone || null;
+              this.excel.downloadUrl = job.downloadUrl || null;
+              this.excel.warning = job.warning || null;
+
+              // NEW: Sync auto-resume fields
+              this.excel.pausedUntil = job.pausedUntil || null;
+              this.excel.pauseReason = job.pauseReason || null;
+              this.excel.retryDelay = Number(job.retryDelay || 20 * 60 * 1000);
+              this.excel.retryCount = Number(job.retryCount || 0);
+              this.excel.retryDelayMinutes = Math.floor(this.excel.retryDelay / 60000);
+
+              // NEW: Start/stop countdown based on pause state
+              if (job.status === 'paused' && job.pausedUntil) {
+                this.startCountdown();
+              } else {
+                this.stopCountdown();
+              }
+
+              // Stop polling if job is done
+              if (
+                job.status === "completed" ||
+                job.status === "failed" ||
+                job.status === "cancelled"
+              ) {
+                if (this.pollTimer) {
+                  clearInterval(this.pollTimer);
+                  this.pollTimer = null;
+                }
+                this.stopCountdown();
+                // Refresh history once job is finished
+                this.loadExcelHistory();
+              }
+
+              // map stats -> keep current UI rendering intact
+              this.excel.result = {
+                stats: {
+                  total: Number(job.stats?.total ?? 0),
+                  found: Number(job.stats?.found ?? 0),
+                  notFound: Number(job.stats?.notFound ?? 0),
+                  sendMessageSuccess: Number(job.stats?.sendMessageSuccess ?? 0),
+                  sendMessageFailed: Number(job.stats?.sendMessageFailed ?? 0),
+                  error: Number(job.stats?.error ?? 0),
+                },
+                downloadUrl: String(job.downloadUrl || ""),
+              };
+
+              if (job.status === "failed") {
+                this.excel.error = job.error || "Job failed";
+              }
+
+              if (job.status === "completed" || job.status === "failed") {
+                if (this.pollTimer) {
+                  clearInterval(this.pollTimer);
+                  this.pollTimer = null;
+                }
+              }
+            } catch (e) {
+              // ignore transient polling errors
+            }
+          };
+
+          await pollOnce();
+          this.pollTimer = setInterval(pollOnce, 2000);
+        },
+
+        handleExcelMediaChange(event) {
+          if (this.isExcelSessionActive) return;
+          const files = event.target.files;
+          if (!files || files.length === 0) return;
+
+          const currentCount = this.excel.mediaFiles.length;
+          const remainingSlots = 10 - currentCount;
+
+          if (remainingSlots <= 0) return;
+
+          const filesArray = Array.from(files).slice(0, remainingSlots);
+
+          const newFiles = filesArray.map(file => ({
+            file: file,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+          }));
+
+          this.excel.mediaFiles = [...this.excel.mediaFiles, ...newFiles];
+          this.excel.error = null;
+
+          event.target.value = '';
+        },
+
+        removeExcelMediaFile(index) {
+          if (this.excel.mediaFiles[index].preview) {
+            URL.revokeObjectURL(this.excel.mediaFiles[index].preview);
+          }
+          this.excel.mediaFiles.splice(index, 1);
+        },
+
+        resetExcelForm() {
+          const input = document.getElementById("excelFile");
+          if (input) input.value = "";
+
+          const mediaInput = document.getElementById("excelMediaFiles");
+          if (mediaInput) mediaInput.value = "";
+
+          // Revoke preview URLs
+          this.excel.mediaFiles.forEach(fileObj => {
+            if (fileObj.preview) {
+              URL.revokeObjectURL(fileObj.preview);
+            }
+          });
+
+          this.excel.file = null;
+          this.excel.mediaFiles = [];
+          this.excel.message = "Chào anh/chị 👋 Em xin phép được giới thiệu một sản phẩm/dịch vụ có thể phù hợp với anh/chị."; // NEW: Reset message
+          this.excel.retryDelayMinutes = 20;
+          this.excel.taskDelaySeconds = 3; // NEW: Reset task delay
+          this.excel.loading = false;
+          this.excel.error = null;
+          this.excel.result = null;
+          this.excel.jobId = null;
+          this.excel.status = null;
+          this.excel.totalPhones = 0;
+          this.excel.processed = 0;
+          this.excel.currentPhone = null;
+          this.excel.downloadUrl = null;
+          this.excel.warning = null;
+          // NEW: Cleanup auto-resume fields
+          this.excel.pausedUntil = null;
+          this.excel.pauseReason = null;
+          this.excel.retryDelay = 20 * 60 * 1000;
+          this.excel.retryCount = 0;
+
+          if (this.pollTimer) {
+            clearInterval(this.pollTimer);
+            this.pollTimer = null;
+          }
+
+          // NEW: Stop countdown
+          this.stopCountdown();
+          // Refresh history
+          this.loadExcelHistory();
+        },
+
+        async pauseJob() {
+          if (!this.excel.jobId) return;
+          try {
+            const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}/pause`, {
+              method: "POST",
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+              // Status will be updated by polling
+            }
+          } catch (e) {
+            console.error("Lỗi pause job:", e);
+          }
+        },
+
+        async resumeJob() {
+          if (!this.excel.jobId) return;
+          try {
+            const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}/resume`, {
+              method: "POST",
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+              // Status will be updated by polling
+            }
+          } catch (e) {
+            console.error("Lỗi resume job:", e);
+          }
+        },
+
+        async cancelJob() {
+          if (!this.excel.jobId) return;
+          try {
+            const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}/cancel`, {
+              method: "POST",
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+              // Status will be updated by polling
+              this.stopCountdown();
+            }
+          } catch (e) {
+            console.error("Lỗi cancel job:", e);
+          }
+        },
+
+        // NEW: Start countdown timer
+        startCountdown() {
+          // Don't start multiple timers
+          if (this.countdownTimer) return;
+
+          const updateCountdown = () => {
+            if (!this.excel.pausedUntil) {
+              this.countdown.display = '--:--';
+              this.countdown.remainingSeconds = 0;
+              return;
+            }
+
+            const now = Date.now();
+            const remaining = Math.max(0, this.excel.pausedUntil - now);
+            const seconds = Math.floor(remaining / 1000);
+
+            this.countdown.remainingSeconds = seconds;
+
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            this.countdown.display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+            // Stop when countdown reaches 0
+            if (remaining === 0) {
+              this.stopCountdown();
+            }
+          };
+
+          updateCountdown();
+          this.countdownTimer = setInterval(updateCountdown, 1000);
+        },
+
+        // NEW: Stop countdown timer
+        stopCountdown() {
+          if (this.countdownTimer) {
+            clearInterval(this.countdownTimer);
+            this.countdownTimer = null;
+          }
+          this.countdown.display = '--:--';
+          this.countdown.remainingSeconds = 0;
+        },
+
+        // NEW: Update retry delay on server
+        async updateRetryDelay() {
+          if (!this.excel.jobId) return;
+
+          const delayMs = this.excel.retryDelayMinutes * 60 * 1000;
+
+          try {
+            const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}/set-retry-delay`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ retryDelay: delayMs })
+            });
+
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+              this.excel.retryDelay = delayMs;
+            }
+          } catch (e) {
+            console.error('Lỗi cập nhật retry delay:', e);
+          }
+        },
+
+      };
+    }
+  </script>
+</body>
+
+</html>
