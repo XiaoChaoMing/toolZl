@@ -24,6 +24,45 @@
       </p>
     </header>
 
+    <!-- Workspace Card -->
+    <section class="bg-white backdrop-blur rounded-2xl shadow-xl p-5 md:p-6">
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <h2 class="text-lg md:text-xl font-semibold text-gray-800">Workspace</h2>
+          <p class="text-sm text-gray-500">
+            Mỗi workspace tương ứng 1 tài khoản Zalo. Tất cả request sẽ gửi kèm header
+            <span class="font-mono">X-Workspace-Id</span>.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-3 flex flex-col md:flex-row gap-3 md:items-end">
+        <div class="flex-1">
+          <label class="block text-sm font-medium text-gray-700" for="workspaceId">Workspace ID</label>
+          <input id="workspaceId" type="text" x-model="workspace.id" placeholder="vd: userA, team_1, ws-01"
+            class="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+          <p class="mt-1 text-xs text-gray-500">
+            Chỉ cho phép A-Z a-z 0-9 <span class="font-mono">_</span> <span class="font-mono">-</span>, độ dài 3..64.
+          </p>
+          <template x-if="workspace.error">
+            <div class="mt-2 text-xs text-red-700" x-text="workspace.error"></div>
+          </template>
+        </div>
+        <div class="flex gap-2">
+          <button type="button"
+            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm font-medium px-4 py-2 shadow-md hover:bg-indigo-700 transition"
+            x-on:click="applyWorkspace">
+            ✅ Áp dụng
+          </button>
+          <button type="button"
+            class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white text-gray-800 text-sm font-medium px-4 py-2 hover:bg-gray-50 transition"
+            x-on:click="resetWorkspaceToDefault">
+            ↩️ Mặc định
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- Status Card -->
     <section class="bg-white backdrop-blur rounded-2xl shadow-xl p-5 md:p-6">
       <div class="flex items-center justify-between gap-4 mb-3">
@@ -461,11 +500,12 @@
                 x-on:click="cancelJob">
                 ⏹️ Dừng
               </button>
-              <a x-show="excel.downloadUrl && (excel.status === 'running' || excel.status === 'paused' || excel.status === 'cancelled' || excel.status === 'completed')"
+              <button x-show="excel.downloadUrl && (excel.status === 'running' || excel.status === 'paused' || excel.status === 'cancelled' || excel.status === 'completed')"
+                type="button"
                 class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
-                x-bind:href="excel.downloadUrl" download>
+                x-on:click="downloadByUrl(excel.downloadUrl)">
                 📥 Tải file kết quả hiện tại
-              </a>
+              </button>
             </div>
 
             <!-- Countdown Timer for Auto-Resume -->
@@ -554,10 +594,11 @@
               </ul>
 
               <div class="pt-2">
-                <a class="inline-flex items-center gap-2 text-sm font-medium text-indigo-700 hover:text-indigo-900 hover:underline"
-                  x-bind:href="excel.downloadUrl || excel.result.downloadUrl" download>
+                <button type="button"
+                  class="inline-flex items-center gap-2 text-sm font-medium text-indigo-700 hover:text-indigo-900 hover:underline"
+                  x-on:click="downloadByUrl(excel.downloadUrl || excel.result.downloadUrl)">
                   📥 Tải file kết quả
-                </a>
+                </button>
               </div>
             </div>
           </template>
@@ -577,11 +618,12 @@
                       Trạng thái: <span class="font-semibold text-gray-700" x-text="item.status"></span>
                     </div>
                   </div>
-                  <a x-show="item.downloadUrl"
+                  <button x-show="item.downloadUrl"
+                    type="button"
                     class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
-                    :href="item.downloadUrl" download>
+                    x-on:click="downloadByUrl(item.downloadUrl)">
                     📥 Tải xuống
-                  </a>
+                  </button>
                 </div>
               </template>
             </div>
@@ -763,6 +805,10 @@
       let currentQrUrl = null;
 
       return {
+        workspace: {
+          id: localStorage.getItem("workspaceId") || "default",
+          error: null,
+        },
         loading: {
           status: false,
         },
@@ -830,13 +876,70 @@
         },
 
         init() {
+          // Persist + normalize initial workspace
+          this.applyWorkspace(true);
           this.refreshAll();
           this.loadExcelHistory();
         },
 
+        validateWorkspaceId(id) {
+          const v = String(id || "").trim();
+          if (!v) return { ok: false, message: "Workspace ID không được để trống." };
+          if (!/^[A-Za-z0-9_-]{3,64}$/.test(v)) {
+            return {
+              ok: false,
+              message:
+                "Workspace ID không hợp lệ (A-Z a-z 0-9 _ -), độ dài 3..64.",
+            };
+          }
+          return { ok: true, value: v };
+        },
+
+        applyWorkspace(isSilent = false) {
+          const res = this.validateWorkspaceId(this.workspace.id);
+          if (!res.ok) {
+            this.workspace.error = res.message;
+            return false;
+          }
+          this.workspace.id = res.value;
+          this.workspace.error = null;
+          localStorage.setItem("workspaceId", this.workspace.id);
+
+          if (!isSilent) {
+            // reset workspace-specific state
+            this.qr.imgUrl = null;
+            this.qr.error = null;
+            this.excel.jobId = null;
+            this.excel.status = null;
+            this.excel.downloadUrl = null;
+            this.excel.history = [];
+            this.userSearch.user = null;
+            this.userSearch.message = null;
+            this.userSearch.error = null;
+
+            this.refreshAll();
+            this.loadExcelHistory();
+          }
+          return true;
+        },
+
+        resetWorkspaceToDefault() {
+          this.workspace.id = "default";
+          this.applyWorkspace(false);
+        },
+
+        async apiFetch(path, options = {}) {
+          const ok = this.applyWorkspace(true);
+          if (!ok) throw new Error(this.workspace.error || "Workspace invalid");
+
+          const headers = new Headers(options.headers || {});
+          headers.set("X-Workspace-Id", this.workspace.id);
+          return fetch(`${API_BASE}${path}`, { ...options, headers });
+        },
+
         async loadExcelHistory() {
           try {
-            const resp = await fetch(`${API_BASE}/api/jobs`);
+            const resp = await this.apiFetch(`/api/jobs`);
             const data = await resp.json();
             if (!resp.ok || !data || !data.success || !Array.isArray(data.jobs)) return;
             this.excel.history = data.jobs
@@ -866,7 +969,7 @@
 
           try {
             const timestamp = Date.now();
-            const response = await fetch(`${API_BASE}/qr?t=${timestamp}`);
+            const response = await this.apiFetch(`/qr?t=${timestamp}`);
 
             if (!response.ok) {
               let message = "Không thể tải mã QR";
@@ -900,7 +1003,7 @@
           this.qr.loading = true;
           this.qr.error = null;
           try {
-            const resp = await fetch(`${API_BASE}/zalo/qr/regenerate`, {
+            const resp = await this.apiFetch(`/zalo/qr/regenerate`, {
               method: "POST",
             });
             const data = await resp.json().catch(() => null);
@@ -946,7 +1049,7 @@
           }
 
           try {
-            const zaloResponse = await fetch(`${API_BASE}/zalo/status`);
+            const zaloResponse = await this.apiFetch(`/zalo/status`);
             if (!zaloResponse.ok) throw new Error("Zalo status failed");
             const zaloData = await zaloResponse.json();
 
@@ -1012,7 +1115,7 @@
               formData.append("media", fileObj.file);
             });
 
-            const response = await fetch(`${API_BASE}/api/process-excel`, {
+            const response = await this.apiFetch(`/api/process-excel`, {
               method: "POST",
               body: formData,
             });
@@ -1049,7 +1152,7 @@
 
           const pollOnce = async () => {
             try {
-              const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}`);
+              const resp = await this.apiFetch(`/api/jobs/${this.excel.jobId}`);
               const data = await resp.json();
 
               if (!resp.ok || !data || !data.success || !data.job) {
@@ -1211,7 +1314,7 @@
         async pauseJob() {
           if (!this.excel.jobId) return;
           try {
-            const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}/pause`, {
+            const resp = await this.apiFetch(`/api/jobs/${this.excel.jobId}/pause`, {
               method: "POST",
             });
             const data = await resp.json();
@@ -1226,7 +1329,7 @@
         async resumeJob() {
           if (!this.excel.jobId) return;
           try {
-            const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}/resume`, {
+            const resp = await this.apiFetch(`/api/jobs/${this.excel.jobId}/resume`, {
               method: "POST",
             });
             const data = await resp.json();
@@ -1241,7 +1344,7 @@
         async cancelJob() {
           if (!this.excel.jobId) return;
           try {
-            const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}/cancel`, {
+            const resp = await this.apiFetch(`/api/jobs/${this.excel.jobId}/cancel`, {
               method: "POST",
             });
             const data = await resp.json();
@@ -1303,7 +1406,7 @@
           const delayMs = this.excel.retryDelayMinutes * 60 * 1000;
 
           try {
-            const resp = await fetch(`${API_BASE}/api/jobs/${this.excel.jobId}/set-retry-delay`, {
+            const resp = await this.apiFetch(`/api/jobs/${this.excel.jobId}/set-retry-delay`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ retryDelay: delayMs })
@@ -1333,7 +1436,7 @@
           this.userSearch.friendRequestSuccess = null;
 
           try {
-            const response = await fetch(`${API_BASE}/api/users/search`, {
+            const response = await this.apiFetch(`/api/users/search`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1376,7 +1479,7 @@
           this.userSearch.friendRequestSuccess = null;
 
           try {
-            const response = await fetch(`${API_BASE}/api/users/friend-request`, {
+            const response = await this.apiFetch(`/api/users/friend-request`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1400,6 +1503,34 @@
             this.userSearch.friendRequestSuccess = null;
           } finally {
             this.userSearch.friendRequestLoading = false;
+          }
+        },
+
+        async downloadByUrl(url) {
+          if (!url) return;
+          try {
+            const m = String(url).match(/\/uploads\/([^?#]+)/);
+            const encodedFilename = m && m[1] ? m[1] : null;
+            if (!encodedFilename) throw new Error("Link download không hợp lệ.");
+
+            const filename = decodeURIComponent(encodedFilename);
+            const resp = await this.apiFetch(`/uploads/${encodeURIComponent(filename)}`);
+            if (!resp.ok) {
+              const data = await resp.json().catch(() => null);
+              throw new Error((data && (data.message || data.error)) || "Không thể tải file.");
+            }
+            const blob = await resp.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(blobUrl);
+          } catch (e) {
+            console.error("download error:", e);
+            this.excel.error = e?.message || "Không thể tải file.";
           }
         },
 
