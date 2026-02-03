@@ -256,7 +256,7 @@ export async function initZaloQR(workspaceId) {
   session.qrInitPromise = (async () => {
     // Create promise for QR generation tracking
     createQrGenerationPromise.call(session);
-
+    
     session.zalo = new Zalo({
       selfListen: false,
       checkUpdate: true,
@@ -281,12 +281,12 @@ export async function initZaloQR(workspaceId) {
     });
 
     const callback = createLoginQRCallback(session);
-
+    
     let loginQRPromise;
     try {
       loginQRPromise = session.zalo.loginQR(
         {
-          userAgent: "",
+        userAgent: "",
         },
         callback
       );
@@ -339,7 +339,7 @@ export async function initZalo(workspaceId) {
   session.initPromise = (async () => {
     try {
       await initZaloQR(workspaceId);
-
+      
       // Wait a short time for login completion, but don't block long
       try {
         await Promise.race([
@@ -363,7 +363,7 @@ export async function initZalo(workspaceId) {
       } catch {
         // ignore
       }
-
+      
       logInfo("zalo_init_success", {
         workspaceId,
         hasApi: !!session.api,

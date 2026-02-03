@@ -33,6 +33,18 @@
           Hệ thống sẽ tự tạo workspace ID cho bạn, không cần nhập thủ công.
         </p>
 
+        <div class="mt-5 space-y-3 max-w-md mx-auto text-left">
+          <label class="block text-sm font-medium text-gray-700" for="workspaceName">
+            Tên workspace (tùy chọn)
+          </label>
+          <input id="workspaceName" type="text" x-model="workspace.nameInput"
+            placeholder="Ví dụ: Tài khoản Sale 1, CSKH OA A..."
+            class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+          <p class="text-xs text-gray-400">
+            Tên này chỉ hiển thị trên trình duyệt của bạn để dễ phân biệt workspace.
+          </p>
+        </div>
+
         <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
           <button type="button"
             class="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white text-sm md:text-base font-semibold px-6 py-3 shadow-md hover:bg-indigo-700 transition"
@@ -58,13 +70,14 @@
           <p class="text-sm text-gray-500">
             Kiểm tra trạng thái server và kết nối Zalo hiện tại
           </p>
-          <div class="mt-2 text-xs text-gray-500">
-            Workspace:
-            <span class="font-mono font-semibold text-gray-700" x-text="workspace.id"></span>
+          <div class="mt-2 text-xs text-gray-500 flex flex-wrap items-center gap-2">
+            <span>Workspace hiện tại:</span>
+            <span class="font-semibold text-gray-800" x-text="currentWorkspaceName() || 'Chưa chọn'"></span>
+            <span class="font-mono text-gray-400" x-text="currentWorkspaceIdShort()"></span>
             <button type="button"
-              class="ml-2 inline-flex items-center rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
-              x-on:click="resetWorkspace()">
-              Tạo workspace mới
+              class="ml-auto inline-flex items-center rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+              x-on:click="workspaceManagerOpen = true">
+              Quản lý workspace
             </button>
           </div>
         </div>
@@ -795,6 +808,66 @@
       </section>
     </div>
 
+    <!-- Workspace Manager Modal -->
+    <div x-show="workspaceManagerOpen" x-cloak
+      class="fixed inset-0 z-40 bg-black bg-opacity-40 flex items-center justify-center">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900">Quản lý Workspace</h3>
+          <button class="text-gray-400 hover:text-gray-600" type="button"
+            x-on:click="workspaceManagerOpen = false">✕</button>
+        </div>
+
+        <!-- Quick create inside manager -->
+        <div class="space-y-2 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-3 text-xs">
+          <div class="font-medium text-gray-800 mb-1">Tạo workspace mới</div>
+          <input type="text" x-model="workspace.nameInput"
+            placeholder="Tên workspace (tùy chọn)..."
+            class="block w-full rounded-md border border-gray-200 px-2 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" />
+          <div class="flex justify-end">
+            <button type="button"
+              class="inline-flex items-center gap-1 rounded-md bg-indigo-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-indigo-700 transition"
+              x-on:click="createWorkspaceAndEnter(); workspaceManagerOpen = false;">
+              ➕ Tạo & sử dụng
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2 max-h-64 overflow-y-auto">
+          <template x-if="!workspace.items || workspace.items.length === 0">
+            <div class="text-xs text-gray-500">
+              Chưa có workspace nào. Hãy tạo mới bằng form bên trên.
+            </div>
+          </template>
+
+          <template x-for="ws in workspace.items" :key="ws.id">
+            <div class="flex items-center justify-between rounded-lg border px-3 py-2 text-xs">
+              <div class="min-w-0">
+                <div class="font-medium text-gray-800 truncate" x-text="ws.name"></div>
+                <div class="font-mono text-gray-500 truncate" x-text="ws.id"></div>
+              </div>
+              <div class="flex gap-1">
+                <button type="button"
+                  class="px-2 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                  x-on:click="switchWorkspace(ws.id)">
+                  Dùng
+                </button>
+                <button type="button"
+                  class="px-2 py-1 rounded bg-red-50 text-red-700 hover:bg-red-100"
+                  x-on:click="deleteWorkspace(ws.id)">
+                  Xoá
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="pt-2 border-t text-xs text-gray-500">
+          Mỗi workspace tương ứng một tài khoản Zalo độc lập. Bạn có thể tạo nhiều workspace cho nhiều account khác nhau.
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -804,10 +877,13 @@
 
       return {
         workspace: {
-          id: localStorage.getItem("workspaceId") || "",
-          ready: !!localStorage.getItem("workspaceId"),
+          currentId: null,
+          items: [],
+          ready: false,
           error: null,
+          nameInput: "",
         },
+        workspaceManagerOpen: false,
         loading: {
           status: false,
         },
@@ -875,52 +951,61 @@
         },
 
         init() {
-          // Only enter the app if a workspace already exists
-          if (this.workspace.ready) {
+          // Load workspace list and current selection from localStorage
+          try {
+            const rawList = localStorage.getItem("ws_list");
+            if (rawList) {
+              const parsed = JSON.parse(rawList);
+              if (Array.isArray(parsed)) {
+                this.workspace.items = parsed.filter(
+                  (ws) => ws && typeof ws.id === "string"
+                );
+              }
+            }
+          } catch {
+            this.workspace.items = [];
+          }
+
+          // Backward compatibility: migrate legacy single workspaceId if present
+          const legacyId = localStorage.getItem("workspaceId");
+          if (!this.workspace.items.length && legacyId) {
+            const now = Date.now();
+            this.workspace.items.push({
+              id: legacyId,
+              name: "Legacy Workspace",
+              createdAt: now,
+              lastUsedAt: now,
+            });
+          }
+
+          const currentId = localStorage.getItem("ws_current");
+          if (
+            currentId &&
+            this.workspace.items.some((ws) => ws.id === currentId)
+          ) {
+            this.workspace.currentId = currentId;
+            this.workspace.ready = true;
             this.enterApp();
+          } else {
+            this.workspace.currentId = null;
+            this.workspace.ready = false;
           }
         },
 
-        validateWorkspaceId(id) {
-          const v = String(id || "").trim();
-          if (!v) return { ok: false, message: "Workspace ID không được để trống." };
-          if (!/^[A-Za-z0-9_-]{3,64}$/.test(v)) {
-            return {
-              ok: false,
-              message:
-                "Workspace ID không hợp lệ (A-Z a-z 0-9 _ -), độ dài 3..64.",
-            };
+        persistWorkspaceState() {
+          try {
+            localStorage.setItem(
+              "ws_list",
+              JSON.stringify(this.workspace.items || [])
+            );
+            if (this.workspace.currentId) {
+              localStorage.setItem("ws_current", this.workspace.currentId);
+            } else {
+              localStorage.removeItem("ws_current");
+            }
+          } catch {
+            // ignore persistence errors
           }
-          return { ok: true, value: v };
-        },
-
-        applyWorkspace(isSilent = false) {
-          const res = this.validateWorkspaceId(this.workspace.id);
-          if (!res.ok) {
-            this.workspace.error = res.message;
-            return false;
-          }
-          this.workspace.id = res.value;
-          this.workspace.error = null;
-          localStorage.setItem("workspaceId", this.workspace.id);
-          this.workspace.ready = true;
-
-          if (!isSilent) {
-            // reset workspace-specific state
-            this.qr.imgUrl = null;
-            this.qr.error = null;
-            this.excel.jobId = null;
-            this.excel.status = null;
-            this.excel.downloadUrl = null;
-            this.excel.history = [];
-            this.userSearch.user = null;
-            this.userSearch.message = null;
-            this.userSearch.error = null;
-
-            this.refreshAll();
-            this.loadExcelHistory();
-          }
-          return true;
         },
 
         generateWorkspaceId() {
@@ -939,22 +1024,27 @@
           try {
             this.workspace.error = null;
             const id = this.generateWorkspaceId();
-            this.workspace.id = id;
-            const ok = this.applyWorkspace(true);
-            if (!ok) return;
+            const nameRaw = (this.workspace.nameInput || "").trim();
+            const name =
+              nameRaw || `Workspace ${this.workspace.items.length + 1}`;
+            const now = Date.now();
+            this.workspace.items.push({
+              id,
+              name,
+              createdAt: now,
+              lastUsedAt: now,
+            });
+            this.workspace.currentId = id;
+            this.workspace.ready = true;
+            this.persistWorkspaceState();
+            this.resetWorkspaceStateForCurrent();
             this.enterApp();
           } catch (e) {
             this.workspace.error = e?.message || "Không thể tạo workspace.";
           }
         },
 
-        resetWorkspace() {
-          // Create a brand-new workspace and reset UI state
-          localStorage.removeItem("workspaceId");
-          this.workspace.id = "";
-          this.workspace.ready = false;
-          this.workspace.error = null;
-
+        resetWorkspaceStateForCurrent() {
           // stop timers
           if (this.pollTimer) {
             clearInterval(this.pollTimer);
@@ -975,19 +1065,103 @@
           this.activeTab = "main";
         },
 
+        resetWorkspace() {
+          // Clear selection and go back to onboarding, keep existing list
+          this.resetWorkspaceStateForCurrent();
+          this.workspace.currentId = null;
+          this.workspace.ready = false;
+          this.workspace.error = null;
+          this.persistWorkspaceState();
+        },
+
         enterApp() {
           // Called when workspace is ready
           this.workspace.ready = true;
+          const current = this.getCurrentWorkspace();
+          if (current) {
+            current.lastUsedAt = Date.now();
+            this.persistWorkspaceState();
+          }
           this.refreshAll();
           this.loadExcelHistory();
         },
 
+        getCurrentWorkspace() {
+          if (!this.workspace.currentId) return null;
+          return (
+            this.workspace.items.find(
+              (ws) => ws.id === this.workspace.currentId
+            ) || null
+          );
+        },
+
+        currentWorkspaceName() {
+          const ws = this.getCurrentWorkspace();
+          return ws ? ws.name : "";
+        },
+
+        currentWorkspaceIdShort() {
+          const ws = this.getCurrentWorkspace();
+          if (!ws) return "";
+          if (ws.id.length <= 10) return ws.id;
+          return `${ws.id.slice(0, 6)}…${ws.id.slice(-4)}`;
+        },
+
+        switchWorkspace(id) {
+          if (!id || id === this.workspace.currentId) {
+            this.workspaceManagerOpen = false;
+            return;
+          }
+          const ws = this.workspace.items.find((w) => w.id === id);
+          if (!ws) return;
+          this.workspace.currentId = id;
+          ws.lastUsedAt = Date.now();
+          this.workspace.ready = true;
+          this.workspaceManagerOpen = false;
+          this.persistWorkspaceState();
+          this.resetWorkspaceStateForCurrent();
+          this.enterApp();
+        },
+
+        deleteWorkspace(id) {
+          const index = this.workspace.items.findIndex((w) => w.id === id);
+          if (index === -1) return;
+
+          const isCurrent = id === this.workspace.currentId;
+          this.workspace.items.splice(index, 1);
+
+          if (!this.workspace.items.length) {
+            // No workspaces left - reset everything to onboarding
+            this.workspace.currentId = null;
+            this.workspace.ready = false;
+            this.workspaceManagerOpen = false;
+            this.persistWorkspaceState();
+            this.resetWorkspaceStateForCurrent();
+            return;
+          }
+
+          if (isCurrent) {
+            const next = this.workspace.items[0];
+            this.workspace.currentId = next.id;
+            next.lastUsedAt = Date.now();
+            this.workspace.ready = true;
+            this.workspaceManagerOpen = false;
+            this.persistWorkspaceState();
+            this.resetWorkspaceStateForCurrent();
+            this.enterApp();
+          } else {
+            this.persistWorkspaceState();
+          }
+        },
+
         async apiFetch(path, options = {}) {
-          const ok = this.applyWorkspace(true);
-          if (!ok) throw new Error(this.workspace.error || "Workspace invalid");
+          const id = this.workspace.currentId;
+          if (!id) {
+            throw new Error("Chưa chọn workspace.");
+          }
 
           const headers = new Headers(options.headers || {});
-          headers.set("X-Workspace-Id", this.workspace.id);
+          headers.set("X-Workspace-Id", id);
           return fetch(`${API_BASE}${path}`, { ...options, headers });
         },
 
@@ -1107,7 +1281,13 @@
             if (!zaloResponse.ok) throw new Error("Zalo status failed");
             const zaloData = await zaloResponse.json();
 
-            if (zaloData.initialized && zaloData.api === "available") {
+            const isInitialized = Boolean(zaloData.initialized);
+            const apiAvailable =
+              zaloData.api === "available" ||
+              zaloData.api === "ok" ||
+              Boolean(zaloData.hasApi);
+
+            if (isInitialized && apiAvailable) {
               this.zalo.state = "connected";
             } else {
               this.zalo.state = "disconnected";
