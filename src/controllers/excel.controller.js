@@ -20,8 +20,8 @@ export async function processExcel(req, res) {
     });
   }
 
-  const zaloStatus = getZaloStatus();
-  const zaloApi = getZaloApi();
+  const zaloStatus = getZaloStatus(req.workspaceId);
+  const zaloApi = getZaloApi(req.workspaceId);
 
   if (!zaloStatus.initialized || !zaloApi) {
     return res.status(400).json({
@@ -31,7 +31,7 @@ export async function processExcel(req, res) {
   }
 
   // Business rule: only one active Excel session at a time
-  const active = getActiveExcelJob();
+  const active = getActiveExcelJob(req.workspaceId);
   if (active) {
     return res.status(400).json({
       success: false,
@@ -71,6 +71,10 @@ export async function processExcel(req, res) {
   }
   // If empty, will fallback to MESSAGE_TEMPLATES in service
 
+  // NEW: Parse auto friend request
+  const autoFriendRequest = req.body.autoFriendRequest === 'true' || req.body.autoFriendRequest === true;
+  const friendRequestMessage = req.body.friendRequestMessage || "Xin chào! Tôi muốn kết bạn với bạn.";
+
   const filePath = excelFile.path;
   const mediaFiles = req.files?.media || [];
 
@@ -95,7 +99,7 @@ export async function processExcel(req, res) {
     });
   }
 
-  const job = createJob({
+  const job = createJob(req.workspaceId, {
     status: "pending",
     totalPhones: analysis.totalValidPhones,
     processed: analysis.processedValidCount,
@@ -108,9 +112,9 @@ export async function processExcel(req, res) {
 
   // Per-job output file (unique)
   const outputFileName = `data_zalo_result_${job.id}.xlsx`;
-  const { resolveUploadPath } = await import("../utils/file.js");
-  const outputFilePath = resolveUploadPath(outputFileName);
-  updateJob(job.id, { downloadUrl: `/uploads/${outputFileName}` });
+  const { resolveWorkspaceUploadPath } = await import("../utils/file.js");
+  const outputFilePath = resolveWorkspaceUploadPath(req.workspaceId, outputFileName);
+  updateJob(job.id, { downloadUrl: `/uploads/${encodeURIComponent(outputFileName)}` });
 
   // Start background processing
   updateJob(job.id, { status: "running" });
@@ -128,6 +132,8 @@ export async function processExcel(req, res) {
     timeout,
     taskDelay, // NEW: Pass task delay
     customMessages, // NEW: Custom messages array from UI
+    autoFriendRequest, // NEW: Auto friend request flag
+    friendRequestMessage, // NEW: Friend request message
     zaloApi,
     ThreadType,
     jobId: job.id,

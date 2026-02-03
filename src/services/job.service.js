@@ -6,12 +6,13 @@ function makeId(prefix = "job") {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-export function createJob(initial) {
+export function createJob(workspaceId, initial) {
   const id = makeId("excel");
   const now = Date.now();
 
   const job = {
     id,
+    workspaceId: workspaceId || null,
     type: "excel",
     status: "pending", // pending | running | paused | completed | failed | cancelled
     createdAt: now,
@@ -55,26 +56,35 @@ export function createJob(initial) {
   return job;
 }
 
-export function getJob(id) {
-  return jobs.get(id) || null;
+export function getJob(workspaceId, id) {
+  // Backward compatible signature: getJob(id)
+  if (id === undefined && typeof workspaceId === "string") {
+    return jobs.get(workspaceId) || null;
+  }
+
+  const job = jobs.get(id) || null;
+  if (!job) return null;
+  if (!workspaceId) return job;
+  return job.workspaceId === workspaceId ? job : null;
 }
 
-export function getActiveExcelJob() {
+export function getActiveExcelJob(workspaceId) {
   for (const job of jobs.values()) {
     if (
       job?.type === "excel" &&
       (job.status === "pending" || job.status === "running" || job.status === "paused")
     ) {
-      return job;
+      if (!workspaceId || job.workspaceId === workspaceId) return job;
     }
   }
   return null;
 }
 
-export function listExcelJobs() {
+export function listExcelJobs(workspaceId) {
   const items = [];
   for (const job of jobs.values()) {
     if (job?.type !== "excel") continue;
+    if (workspaceId && job.workspaceId !== workspaceId) continue;
     items.push(job);
   }
   // newest first

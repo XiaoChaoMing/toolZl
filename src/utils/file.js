@@ -2,6 +2,44 @@ import fs from "fs";
 import path from "path";
 import { UPLOAD_DIR } from "../config/constants.js";
 
+export function resolveWorkspaceDir(workspaceId) {
+  return path.join("workspaces", workspaceId);
+}
+
+export function ensureWorkspaceDir(workspaceId) {
+  const dir = resolveWorkspaceDir(workspaceId);
+  ensureDir(dir);
+  return dir;
+}
+
+export function resolveWorkspaceUploadDir(workspaceId) {
+  return path.join(resolveWorkspaceDir(workspaceId), UPLOAD_DIR);
+}
+
+export function ensureWorkspaceUploadDir(workspaceId) {
+  const dir = resolveWorkspaceUploadDir(workspaceId);
+  ensureDir(dir);
+  return dir;
+}
+
+export function resolveWorkspaceUploadPath(workspaceId, filename) {
+  return path.join(resolveWorkspaceUploadDir(workspaceId), filename);
+}
+
+export function resolveWorkspaceQrDir(workspaceId) {
+  return path.join(resolveWorkspaceDir(workspaceId), "qr");
+}
+
+export function ensureWorkspaceQrDir(workspaceId) {
+  const dir = resolveWorkspaceQrDir(workspaceId);
+  ensureDir(dir);
+  return dir;
+}
+
+export function resolveWorkspaceQrPath(workspaceId, filename) {
+  return path.join(resolveWorkspaceQrDir(workspaceId), filename);
+}
+
 export function ensureDir(dirPath = UPLOAD_DIR) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });

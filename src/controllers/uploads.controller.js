@@ -1,5 +1,8 @@
 import fs from "fs";
-import { isSafeResultFilename, resolveUploadPath } from "../utils/file.js";
+import {
+  isSafeResultFilename,
+  resolveWorkspaceUploadPath,
+} from "../utils/file.js";
 import { logError, logInfo } from "../utils/logger.js";
 
 export function downloadResultFile(req, res) {
@@ -20,7 +23,7 @@ export function downloadResultFile(req, res) {
     });
   }
 
-  const filePath = resolveUploadPath(filename);
+  const filePath = resolveWorkspaceUploadPath(req.workspaceId, filename);
 
   // Check if file exists before attempting download
   if (!fs.existsSync(filePath)) {

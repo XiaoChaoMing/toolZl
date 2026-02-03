@@ -1,5 +1,4 @@
 import app from "./app.js";
-import { initZalo } from "./services/zalo.service.js";
 import { logError } from "./utils/logger.js";
 
 const PORT = process.env.PORT || 3000;
@@ -7,7 +6,6 @@ const HOST = process.env.HOST || "localhost";
 
 const server = app.listen(PORT, HOST, async () => {
   console.log(`🚀 Server running on http://${HOST}:${PORT}`);
-  await initZalo();
 });
 
 server.on("error", (error) => {

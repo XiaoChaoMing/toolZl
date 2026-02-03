@@ -27,6 +27,8 @@ import {
   logSuccess,
   logFindUserFailed,
   logSendMessageFailed,
+  logFriendRequestSuccess,
+  logFriendRequestFailed,
 } from "../utils/logger.js";
 import { getJob, updateJob, autoPauseJob, shouldAutoResume } from "./job.service.js";
 
@@ -138,6 +140,8 @@ export function analyzeExcelForResume({ filePath }) {
     error: 0,
     sendMessageSuccess: 0,
     sendMessageFailed: 0,
+    friendRequestSent: 0, // NEW: Friend request stats
+    friendRequestFailed: 0, // NEW: Friend request stats
   };
 
   let processedValidCount = 0;
@@ -253,11 +257,13 @@ function buildAttachments(mediaFiles) {
  * @param {number} mediaCountCol - Column index for media count
  * @param {number} sendMessageResultCol - Column index for send message result
  */
-function saveWorkbook(workbook, outputFilePath, range, hasMedia, mediaCountCol, sendMessageResultCol) {
+function saveWorkbook(workbook, outputFilePath, range, hasMedia, mediaCountCol, sendMessageResultCol, friendRequestCol) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  // Determine the rightmost column: friendRequestCol (9) is always the last
+  const maxCol = friendRequestCol || (hasMedia ? mediaCountCol : sendMessageResultCol);
   sheet["!ref"] = XLSX.utils.encode_range({
     s: range.s,
-    e: { r: range.e.r, c: Math.max(range.e.c, hasMedia ? mediaCountCol : sendMessageResultCol) },
+    e: { r: range.e.r, c: Math.max(range.e.c, maxCol) },
   });
   XLSX.writeFile(workbook, outputFilePath);
 }
@@ -267,6 +273,8 @@ export async function processExcelFile({
   timeout,
   taskDelay, // NEW: Dynamic task delay from UI
   customMessages, // NEW: Custom messages array from UI
+  autoFriendRequest = false, // NEW: Auto friend request flag
+  friendRequestMessage = "Xin chào! Tôi muốn kết bạn với bạn.", // NEW: Friend request message
   zaloApi,
   ThreadType,
   onProgress,
@@ -308,13 +316,14 @@ export async function processExcelFile({
     const userAvatarCol = 6;
     const sendMessageResultCol = 7;
     const mediaCountCol = 8;
+    const friendRequestCol = 9; // NEW: Friend request result column
 
     const attachments = buildAttachments(mediaFiles);
     const hasMedia = attachments.length > 0;
 
     // Create save callback function for pause/resume handling
     const saveCallback = () => {
-      saveWorkbook(workbook, outputFilePath, range, hasMedia, mediaCountCol, sendMessageResultCol);
+      saveWorkbook(workbook, outputFilePath, range, hasMedia, mediaCountCol, sendMessageResultCol, friendRequestCol);
     };
 
     // Create output file early to ensure it exists from the start
@@ -359,6 +368,7 @@ export async function processExcelFile({
       const userPhoneCell = XLSX.utils.encode_cell({ r, c: userPhoneCol });
       const userAvatarCell = XLSX.utils.encode_cell({ r, c: userAvatarCol });
       const sendResultCell = XLSX.utils.encode_cell({ r, c: sendMessageResultCol });
+      const friendRequestCell = XLSX.utils.encode_cell({ r, c: friendRequestCol }); // NEW: Friend request cell
 
       if (!isVietnamesePhoneNumberValid(raw)) {
         stats.invalid++;
@@ -421,12 +431,51 @@ export async function processExcelFile({
           if (!uid || uid === "N/A") {
             stats.sendMessageFailed++;
             sheet[sendResultCell] = { t: "s", v: hasMedia ? "gửi media thất bại" : "gửi tn thất bại" };
+            sheet[friendRequestCell] = { t: "s", v: "N/A" }; // NEW: No UID, can't send friend request
             if (hasMedia) {
               const mediaCountCell = XLSX.utils.encode_cell({ r, c: mediaCountCol });
               sheet[mediaCountCell] = { t: "n", v: 0 };
             }
             return;
           }
+
+          // NEW: Send friend request if enabled (before sending message)
+          if (autoFriendRequest) {
+            try {
+              await zaloApi.sendFriendRequest(friendRequestMessage, uid.toString());
+              stats.friendRequestSent++;
+              sheet[friendRequestCell] = { t: "s", v: "Đã gửi thành công" };
+              // Log success to file
+              logFriendRequestSuccess(phone, {
+                uid: uid.toString(),
+                name: userName,
+                avatar: userAvatar,
+                message: friendRequestMessage,
+              });
+            } catch (err) {
+              stats.friendRequestFailed++;
+              // Get full error message from server/library
+              const errorMsg = (err?.message || err?.error || String(err))
+                .replace(/\r?\n/g, " ")
+                .trim();
+              
+              // Store full error in Excel (no truncation)
+              sheet[friendRequestCell] = { t: "s", v: `Gửi thất bại: ${errorMsg}` };
+              
+              // Log failure to file with full error details
+              logFriendRequestFailed(phone, errorMsg, {
+                uid: uid.toString(),
+                name: userName,
+                avatar: userAvatar,
+                message: friendRequestMessage,
+              });
+              
+              // Don't throw - continue with message sending
+            }
+          } else {
+            sheet[friendRequestCell] = { t: "s", v: "N/A" };
+          }
+
           // Use customMessages if available, otherwise fallback to MESSAGE_TEMPLATES
           const message = (customMessages && customMessages.length > 0)
             ? randomItem(customMessages)
@@ -483,6 +532,7 @@ export async function processExcelFile({
             .replace(/\r?\n/g, " ")
             .trim();
           sheet[resultCell] = { t: "s", v: errorMsg };
+          sheet[friendRequestCell] = { t: "s", v: "N/A" }; // NEW: No user found, can't send friend request
 
           logFindUserFailed(phone, err?.message || String(err));
 

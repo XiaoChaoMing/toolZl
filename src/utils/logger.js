@@ -289,6 +289,48 @@ export function logSendMessageFailed(phone, error, options = {}) {
 }
 
 /**
+ * Ghi log cho friend request thành công
+ */
+export function logFriendRequestSuccess(phone, options = {}) {
+  try {
+    ensureLogDir();
+    const vnTime = toVietnamTime();
+    const entry = `[${vnTime.short} GMT+7] ✅ GỬI LỜI MỜI KẾT BẠN THÀNH CÔNG\n` +
+      `├─ 📞 Số điện thoại: ${phone}\n` +
+      `├─ 👤 Họ tên: ${options.name || '[Chưa có dữ liệu]'}\n` +
+      `├─ 🆔 UID: ${options.uid || 'N/A'}\n` +
+      `├─ 💬 Lời nhắn: ${options.message || '[Chưa có dữ liệu]'}\n` +
+      `└─ 🖼️  Avatar: ${options.avatar || 'N/A'}\n` +
+      `${'─'.repeat(80)}\n\n`;
+    fs.appendFileSync(LOG_FILE, entry, "utf8");
+  } catch (err) {
+    console.error('Error logging friend request success:', err);
+  }
+}
+
+/**
+ * Ghi log cho lỗi friend request
+ */
+export function logFriendRequestFailed(phone, error, options = {}) {
+  try {
+    ensureLogDir();
+    const vnTime = toVietnamTime();
+    const errorMsg = error || 'Lỗi không xác định';
+    const entry = `[${vnTime.short} GMT+7] ❌ GỬI LỜI MỜI KẾT BẠN THẤT BẠI\n` +
+      `├─ 📞 Số điện thoại: ${phone}\n` +
+      `├─ 👤 Họ tên: ${options.name || '[Không xác định]'}\n` +
+      `├─ 🆔 UID: ${options.uid || 'N/A'}\n` +
+      `├─ 💬 Lời nhắn: ${options.message || '[Không gửi được]'}\n` +
+      `├─ 🖼️  Avatar: ${options.avatar || 'N/A'}\n` +
+      `└─ ⚠️  Lỗi: ${errorMsg}\n` +
+      `${'─'.repeat(80)}\n\n`;
+    fs.appendFileSync(LOG_FILE, entry, "utf8");
+  } catch (err) {
+    console.error('Error logging friend request failed:', err);
+  }
+}
+
+/**
  * Kết thúc job và ghi summary
  */
 export function endJob() {

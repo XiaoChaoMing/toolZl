@@ -7,10 +7,11 @@ import {
 import { logError, logInfo } from "../utils/logger.js";
 import fs from "fs";
 import path from "path";
+import { resolveWorkspaceQrPath } from "../utils/file.js";
 
 export function getZaloStatusHandler(req, res) {
   try {
-    const status = getZaloStatus();
+    const status = getZaloStatus(req.workspaceId);
     return res.json({
       initialized: status.initialized,
       api: status.hasApi ? "available" : "not available",
@@ -32,7 +33,8 @@ export function getQrCode(req, res) {
   
   // If no filename provided, try to get current or find latest
   if (!filename) {
-    filename = getCurrentQrFilename() || findLatestQrFile();
+    filename =
+      getCurrentQrFilename(req.workspaceId) || findLatestQrFile(req.workspaceId);
   }
   
   // If still no filename, return 404
@@ -57,7 +59,7 @@ export function getQrCode(req, res) {
     });
   }
   
-  const filePath = path.join(".", filename);
+  const filePath = resolveWorkspaceQrPath(req.workspaceId, filename);
   
   // Check if file exists
   if (!fs.existsSync(filePath)) {
@@ -72,7 +74,7 @@ export function getQrCode(req, res) {
   }
   
   // Send file
-  res.sendFile(filename, { root: "." }, (err) => {
+  res.sendFile(path.basename(filePath), { root: path.dirname(filePath) }, (err) => {
     if (err) {
       logError("qr_file_send_error", {
         error: err?.message || String(err),
@@ -95,7 +97,7 @@ export async function regenerateQrHandler(req, res) {
   try {
     logInfo("qr_regenerate_request", {});
     
-    const result = await regenerateQr();
+    const result = await regenerateQr(req.workspaceId);
     
     if (!result || !result.success) {
       logError("qr_regenerate_failed", {

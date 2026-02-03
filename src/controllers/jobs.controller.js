@@ -1,11 +1,12 @@
 import { getJob, listExcelJobs, updateJob, setJobRetryDelay } from "../services/job.service.js";
 
 export function listExcelJobsHandler(req, res) {
-  const jobs = listExcelJobs();
+  const jobs = listExcelJobs(req.workspaceId);
   return res.json({
     success: true,
     jobs: jobs.map((job) => ({
       id: job.id,
+      workspaceId: job.workspaceId,
       type: job.type,
       status: job.status,
       createdAt: job.createdAt,
@@ -22,7 +23,7 @@ export function listExcelJobsHandler(req, res) {
 
 export function getJobStatus(req, res) {
   const { id } = req.params;
-  const job = getJob(id);
+  const job = getJob(req.workspaceId, id);
 
   if (!job) {
     return res.status(404).json({
@@ -55,7 +56,7 @@ export function getJobStatus(req, res) {
 
 export function pauseJob(req, res) {
   const { id } = req.params;
-  const job = getJob(id);
+  const job = getJob(req.workspaceId, id);
 
   if (!job) {
     return res.status(404).json({
@@ -82,7 +83,7 @@ export function pauseJob(req, res) {
 
 export function resumeJob(req, res) {
   const { id } = req.params;
-  const job = getJob(id);
+  const job = getJob(req.workspaceId, id);
 
   if (!job) {
     return res.status(404).json({
@@ -113,7 +114,7 @@ export function resumeJob(req, res) {
 
 export function cancelJob(req, res) {
   const { id } = req.params;
-  const job = getJob(id);
+  const job = getJob(req.workspaceId, id);
 
   if (!job) {
     return res.status(404).json({
@@ -141,7 +142,7 @@ export function setRetryDelay(req, res) {
   const { id } = req.params;
   const { retryDelay } = req.body;
 
-  const job = getJob(id);
+  const job = getJob(req.workspaceId, id);
 
   if (!job) {
     return res.status(404).json({

@@ -88,8 +88,32 @@
       </div>
     </section>
 
-    <!-- QR + Excel grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Tab Navigation -->
+    <div class="bg-white backdrop-blur rounded-2xl shadow-xl p-1">
+      <div class="flex gap-2 border-b border-gray-200">
+        <button
+          type="button"
+          class="flex-1 px-4 py-3 text-sm font-medium rounded-lg transition"
+          x-bind:class="activeTab === 'main' 
+            ? 'bg-indigo-100 text-indigo-700' 
+            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'"
+          x-on:click="activeTab = 'main'">
+          📊 Xử Lý Excel
+        </button>
+        <button
+          type="button"
+          class="flex-1 px-4 py-3 text-sm font-medium rounded-lg transition"
+          x-bind:class="activeTab === 'search' 
+            ? 'bg-indigo-100 text-indigo-700' 
+            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'"
+          x-on:click="activeTab = 'search'">
+          🔍 Tìm Kiếm User
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Tab: QR + Excel grid -->
+    <div x-show="activeTab === 'main'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- QR Card -->
       <section class="bg-white backdrop-blur rounded-2xl shadow-xl p-5 md:p-6 flex flex-col">
         <div class="flex items-center justify-between gap-3 mb-3">
@@ -162,8 +186,22 @@
             </div>
           </div>
 
+          <!-- Collapsible Config Section -->
+          <div class="space-y-4">
+            <!-- Collapse/Expand Button -->
+            <button
+              type="button"
+              class="w-full flex items-center justify-between px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
+              x-on:click="excel.configCollapsed = !excel.configCollapsed">
+              <span class="text-sm font-medium text-gray-700">⚙️ Cấu hình nâng cao</span>
+              <svg class="w-5 h-5 text-gray-500 transition-transform" x-bind:class="excel.configCollapsed ? '' : 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-          <!-- Retry Delay for Rate Limit -->
+            <!-- Config Fields (Hidden when collapsed) -->
+            <div x-show="!excel.configCollapsed" class="space-y-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <!-- Retry Delay for Rate Limit -->
           <div class="space-y-1.5">
             <label for="retryDelayInput" class="block text-sm font-medium text-gray-700">
               ⏱️ Thời gian chờ khi bị Rate Limit
@@ -266,7 +304,38 @@
             </p>
           </div>
 
-          <!-- Media Files Upload (Optional) -->
+              <!-- Auto Friend Request Switch -->
+              <div class="space-y-1.5">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    x-model="excel.autoFriendRequest"
+                    class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <span class="text-sm font-medium text-gray-700">
+                    👋 Tự động gửi lời mời kết bạn
+                  </span>
+                </label>
+                <div x-show="excel.autoFriendRequest" class="mt-2">
+                  <label for="friendRequestMessageInput" class="block text-xs font-medium text-gray-600 mb-1">
+                    Lời nhắn kèm lời mời kết bạn (tùy chọn)
+                  </label>
+                  <textarea
+                    id="friendRequestMessageInput"
+                    rows="2"
+                    x-model="excel.friendRequestMessage"
+                    class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Xin chào! Tôi muốn kết bạn với bạn."
+                  ></textarea>
+                  <p class="text-xs text-gray-400 mt-1">
+                    Lời nhắn sẽ được gửi kèm với lời mời kết bạn. Nếu để trống, sẽ sử dụng lời nhắn mặc định.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media Files Upload (Optional) - Always Visible -->
           <div class="space-y-1.5">
             <label for="excelMediaFiles" class="block text-sm font-medium text-gray-700">
               📸 Chọn Hình Ảnh/Video (Tùy chọn)
@@ -280,6 +349,31 @@
             </p>
           </div>
 
+             <!-- Media Preview -->
+             <div x-show="excel.mediaFiles.length > 0" class="grid grid-cols-3 md:grid-cols-5 gap-2">
+              <template x-for="(file, index) in excel.mediaFiles" :key="index">
+                <div class="relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-50 p-1">
+                  <div class="aspect-square flex items-center justify-center bg-gray-100 rounded text-xs">
+                    <template x-if="file.type.startsWith('image/')">
+                      <img :src="file.preview" :alt="file.name" class="w-full h-full object-cover rounded" />
+                    </template>
+                    <template x-if="file.type.startsWith('video/')">
+                      <span class="text-gray-500">🎬</span>
+                    </template>
+                  </div>
+                  <button type="button"
+                    class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
+                    x-on:click="removeExcelMediaFile(index)">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </template>
+            </div>
+
           <!-- File input -->
           <div class="space-y-1.5">
             <label for="excelFile" class="block text-sm font-medium text-gray-700">Chọn file Excel</label>
@@ -291,33 +385,6 @@
               Hỗ trợ định dạng .xlsx, .xls. Cột đầu tiên là số điện thoại.
             </p>
           </div>
-
-          <!-- Media Preview -->
-          <div x-show="excel.mediaFiles.length > 0" class="grid grid-cols-3 md:grid-cols-5 gap-2">
-            <template x-for="(file, index) in excel.mediaFiles" :key="index">
-              <div class="relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-50 p-1">
-                <div class="aspect-square flex items-center justify-center bg-gray-100 rounded text-xs">
-                  <template x-if="file.type.startsWith('image/')">
-                    <img :src="file.preview" :alt="file.name" class="w-full h-full object-cover rounded" />
-                  </template>
-                  <template x-if="file.type.startsWith('video/')">
-                    <span class="text-gray-500">🎬</span>
-                  </template>
-                </div>
-                <button type="button"
-                  class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
-                  x-on:click="removeExcelMediaFile(index)">
-                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clip-rule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </template>
-          </div>
-
-
 
           <!-- Actions -->
           <div class="flex flex-wrap items-center gap-3 pt-1">
@@ -472,6 +539,18 @@
                   Lỗi khác:
                   <span class="font-semibold" x-text="excel.result.stats.error"></span>
                 </li>
+                <template x-if="excel.result.stats.friendRequestSent !== undefined || excel.result.stats.friendRequestFailed !== undefined">
+                  <li>
+                    Gửi lời mời thành công:
+                    <span class="font-semibold" x-text="excel.result.stats.friendRequestSent || 0"></span>
+                  </li>
+                </template>
+                <template x-if="excel.result.stats.friendRequestSent !== undefined || excel.result.stats.friendRequestFailed !== undefined">
+                  <li>
+                    Gửi lời mời thất bại:
+                    <span class="font-semibold" x-text="excel.result.stats.friendRequestFailed || 0"></span>
+                  </li>
+                </template>
               </ul>
 
               <div class="pt-2">
@@ -515,6 +594,166 @@
       </section>
     </div>
 
+    <!-- Search Tab: User Search -->
+    <div x-show="activeTab === 'search'" class="space-y-6">
+      <section class="bg-white backdrop-blur rounded-2xl shadow-xl p-5 md:p-6">
+        <div class="mb-4">
+          <h2 class="text-lg md:text-xl font-semibold text-gray-800">
+            🔍 Tìm Kiếm Người Dùng
+          </h2>
+          <p class="text-sm text-gray-500 mt-1">
+            Tìm kiếm người dùng Zalo bằng số điện thoại để xem thông tin và gửi lời mời kết bạn.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Search Input -->
+          <div class="space-y-1.5">
+            <label for="searchInput" class="block text-sm font-medium text-gray-700">
+              Số điện thoại hoặc UID
+            </label>
+            <div class="flex gap-2">
+              <input
+                id="searchInput"
+                type="text"
+                x-model="userSearch.value"
+                placeholder="Nhập số điện thoại (ví dụ: 0912345678) hoặc UID"
+                class="flex-1 block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                x-bind:disabled="userSearch.loading"
+                x-on:keydown.enter="searchUser()"
+              />
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm font-medium px-4 py-2 shadow-md hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                x-on:click="searchUser()"
+                x-bind:disabled="userSearch.loading || !userSearch.value">
+                <span x-show="!userSearch.loading">🔍 Tìm kiếm</span>
+                <span x-show="userSearch.loading">Đang tìm...</span>
+              </button>
+            </div>
+            <p class="text-xs text-gray-400">
+              Nhập số điện thoại Việt Nam 10 chữ số (ví dụ: 0912345678) hoặc UID để tìm kiếm. Hệ thống sẽ tự động nhận diện loại input.
+            </p>
+          </div>
+
+          <!-- Loading -->
+          <template x-if="userSearch.loading">
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+              <svg class="animate-spin h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 00-8 8h4z">
+                </path>
+              </svg>
+              <span>Đang tìm kiếm người dùng...</span>
+            </div>
+          </template>
+
+          <!-- Error -->
+          <template x-if="userSearch.error">
+            <div class="rounded-xl border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700"
+              x-text="userSearch.error"></div>
+          </template>
+
+          <!-- User Info Card -->
+          <template x-if="userSearch.user">
+            <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-4">
+              <!-- Info message for UID search -->
+              <template x-if="userSearch.message">
+                <div class="rounded-xl border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-700"
+                  x-text="userSearch.message"></div>
+              </template>
+
+              <div class="flex items-start gap-4">
+                <!-- Avatar -->
+                <div class="flex-shrink-0">
+                  <img
+                    x-show="userSearch.user.avatar && userSearch.user.avatar !== 'N/A' && userSearch.user.avatar !== null"
+                    x-bind:src="userSearch.user.avatar"
+                    alt="Avatar"
+                    class="w-16 h-16 rounded-full object-cover border-2 border-indigo-500"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                  />
+                  <div
+                    x-show="!userSearch.user.avatar || userSearch.user.avatar === 'N/A' || userSearch.user.avatar === null"
+                    class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-2xl font-semibold text-indigo-600 border-2 border-indigo-500"
+                    x-text="(userSearch.user.name && userSearch.user.name !== 'N/A' ? userSearch.user.name : 'U').charAt(0).toUpperCase()">
+                  </div>
+                </div>
+
+                <!-- User Info -->
+                <div class="flex-1 min-w-0 space-y-2">
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-800" x-text="userSearch.user.name !== 'N/A' ? userSearch.user.name : 'Không có thông tin'"></h3>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span class="text-gray-500">UID:</span>
+                      <span class="ml-2 font-mono text-gray-700" x-text="userSearch.user.uid || 'N/A'"></span>
+                    </div>
+                    <div x-show="userSearch.user.phone && userSearch.user.phone !== 'N/A'">
+                      <span class="text-gray-500">Số điện thoại:</span>
+                      <span class="ml-2 font-mono text-gray-700" x-text="userSearch.user.phone"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Friend Request Section -->
+              <div class="pt-4 border-t border-gray-200 space-y-3">
+                <div class="space-y-1.5">
+                  <label for="friendRequestMessage" class="block text-sm font-medium text-gray-700">
+                    💬 Lời nhắn kèm lời mời (tùy chọn)
+                  </label>
+                  <textarea
+                    id="friendRequestMessage"
+                    rows="3"
+                    x-model="userSearch.friendRequestMessage"
+                    class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Xin chào! Tôi muốn kết bạn với bạn."
+                  ></textarea>
+                </div>
+
+                <button
+                  type="button"
+                  class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 shadow-md hover:bg-emerald-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  x-on:click="sendFriendRequest()"
+                  x-bind:disabled="userSearch.friendRequestLoading || !userSearch.user || !userSearch.user.uid || userSearch.user.uid === 'N/A'">
+                  <span x-show="!userSearch.friendRequestLoading">Gửi lời mời kết bạn</span>
+                  <span x-show="userSearch.friendRequestLoading">Đang gửi...</span>
+                </button>
+
+                <!-- Friend Request Loading -->
+                <template x-if="userSearch.friendRequestLoading">
+                  <div class="flex items-center gap-2 text-sm text-gray-500">
+                    <svg class="animate-spin h-4 w-4 text-emerald-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                      viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 00-8 8h4z">
+                      </path>
+                    </svg>
+                    <span>Đang gửi lời mời kết bạn...</span>
+                  </div>
+                </template>
+
+                <!-- Friend Request Success -->
+                <template x-if="userSearch.friendRequestSuccess">
+                  <div class="rounded-xl border-l-4 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+                    x-text="userSearch.friendRequestSuccess"></div>
+                </template>
+
+                <!-- Friend Request Error -->
+                <template x-if="userSearch.friendRequestError">
+                  <div class="rounded-xl border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700"
+                    x-text="userSearch.friendRequestError"></div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+        </div>
+      </section>
+    </div>
 
   </div>
 
@@ -560,6 +799,10 @@
           pauseReason: null,
           retryDelay: 20 * 60 * 1000,
           retryCount: 0,
+          // NEW: Auto friend request
+          autoFriendRequest: false,
+          friendRequestMessage: "Xin chào! Tôi muốn kết bạn với bạn.",
+          configCollapsed: true, // Default collapsed for cleaner UI
         },
         // NEW: Countdown state
         countdown: {
@@ -568,6 +811,20 @@
         },
         pollTimer: null,
         countdownTimer: null, // NEW: Countdown interval
+        // NEW: Tab state
+        activeTab: 'main', // 'main' | 'search'
+        // NEW: User search state
+        userSearch: {
+          value: '',
+          loading: false,
+          error: null,
+          user: null, // { name, avatar, uid, phone }
+          message: null,
+          friendRequestMessage: 'Xin chào! Tôi muốn kết bạn với bạn.',
+          friendRequestLoading: false,
+          friendRequestError: null,
+          friendRequestSuccess: null,
+        },
         get isExcelSessionActive() {
           return this.excel && ["running", "pending", "paused"].includes(this.excel.status);
         },
@@ -747,6 +1004,9 @@
             formData.append("taskDelay", String(taskDelayMs));
             // NEW: Send custom message (will be parsed by backend as array separated by |)
             formData.append("message", this.excel.message || "");
+            // NEW: Send auto friend request flag and message
+            formData.append("autoFriendRequest", String(this.excel.autoFriendRequest || false));
+            formData.append("friendRequestMessage", this.excel.friendRequestMessage || "Xin chào! Tôi muốn kết bạn với bạn.");
             // Append media files if any
             this.excel.mediaFiles.forEach(fileObj => {
               formData.append("media", fileObj.file);
@@ -842,6 +1102,8 @@
                   sendMessageSuccess: Number(job.stats?.sendMessageSuccess ?? 0),
                   sendMessageFailed: Number(job.stats?.sendMessageFailed ?? 0),
                   error: Number(job.stats?.error ?? 0),
+                  friendRequestSent: Number(job.stats?.friendRequestSent ?? 0),
+                  friendRequestFailed: Number(job.stats?.friendRequestFailed ?? 0),
                 },
                 downloadUrl: String(job.downloadUrl || ""),
               };
@@ -917,6 +1179,8 @@
           this.excel.message = "Chào anh/chị 👋 Em xin phép được giới thiệu một sản phẩm/dịch vụ có thể phù hợp với anh/chị."; // NEW: Reset message
           this.excel.retryDelayMinutes = 20;
           this.excel.taskDelaySeconds = 3; // NEW: Reset task delay
+          this.excel.autoFriendRequest = false; // NEW: Reset auto friend request
+          this.excel.friendRequestMessage = "Xin chào! Tôi muốn kết bạn với bạn."; // NEW: Reset friend request message
           this.excel.loading = false;
           this.excel.error = null;
           this.excel.result = null;
@@ -1051,6 +1315,91 @@
             }
           } catch (e) {
             console.error('Lỗi cập nhật retry delay:', e);
+          }
+        },
+
+        // NEW: Search user
+        async searchUser() {
+          if (!this.userSearch.value || this.userSearch.value.trim() === '') {
+            this.userSearch.error = 'Vui lòng nhập số điện thoại hoặc UID để tìm kiếm.';
+            return;
+          }
+
+          this.userSearch.loading = true;
+          this.userSearch.error = null;
+          this.userSearch.user = null;
+          this.userSearch.message = null;
+          this.userSearch.friendRequestError = null;
+          this.userSearch.friendRequestSuccess = null;
+
+          try {
+            const response = await fetch(`${API_BASE}/api/users/search`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                value: this.userSearch.value.trim(),
+              }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+              if (data.user) {
+                this.userSearch.user = data.user;
+                this.userSearch.message = null;
+              } else {
+                this.userSearch.user = null;
+                this.userSearch.message = data.message || 'Không tìm thấy người dùng.';
+              }
+            } else {
+              this.userSearch.error = data.error || 'Không thể tìm kiếm người dùng. Vui lòng thử lại.';
+              this.userSearch.user = null;
+            }
+          } catch (error) {
+            console.error('Lỗi tìm kiếm user:', error);
+            this.userSearch.error = 'Lỗi kết nối đến server. Vui lòng thử lại sau.';
+            this.userSearch.user = null;
+          } finally {
+            this.userSearch.loading = false;
+          }
+        },
+
+        // NEW: Send friend request
+        async sendFriendRequest() {
+          if (!this.userSearch.user || !this.userSearch.user.uid || this.userSearch.user.uid === 'N/A') {
+            this.userSearch.friendRequestError = 'Không có thông tin UID để gửi lời mời kết bạn.';
+            return;
+          }
+
+          this.userSearch.friendRequestLoading = true;
+          this.userSearch.friendRequestError = null;
+          this.userSearch.friendRequestSuccess = null;
+
+          try {
+            const response = await fetch(`${API_BASE}/api/users/friend-request`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                uid: this.userSearch.user.uid,
+                message: this.userSearch.friendRequestMessage || 'Xin chào! Tôi muốn kết bạn với bạn.',
+              }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+              this.userSearch.friendRequestSuccess = data.message || 'Đã gửi lời mời kết bạn thành công.';
+              this.userSearch.friendRequestError = null;
+            } else {
+              this.userSearch.friendRequestError = data.error || 'Không thể gửi lời mời kết bạn. Vui lòng thử lại.';
+              this.userSearch.friendRequestSuccess = null;
+            }
+          } catch (error) {
+            console.error('Lỗi gửi friend request:', error);
+            this.userSearch.friendRequestError = 'Lỗi kết nối đến server. Vui lòng thử lại sau.';
+            this.userSearch.friendRequestSuccess = null;
+          } finally {
+            this.userSearch.friendRequestLoading = false;
           }
         },
 
