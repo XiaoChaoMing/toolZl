@@ -262,6 +262,7 @@
                 const next = digitsOnly === '' ? '' : String(parseInt(digitsOnly, 10));
                 $event.target.value = next;
                 excel.retryDelayMinutes = next === '' ? null : Number(next);
+                scheduleConfigSave();
               " />
             <div class="flex flex-wrap items-center gap-2 pt-1">
               <span class="text-xs text-gray-400 mr-1">
@@ -269,17 +270,17 @@
               </span>
               <button type="button"
                 class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
-                x-on:click="excel.retryDelayMinutes = 15">
+                x-on:click="excel.retryDelayMinutes = 15; scheduleConfigSave();">
                 15 phút
               </button>
               <button type="button"
                 class="px-2.5 py-1 rounded-full border border-indigo-200 text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
-                x-on:click="excel.retryDelayMinutes = 20">
+                x-on:click="excel.retryDelayMinutes = 20; scheduleConfigSave();">
                 20 phút (khuyến nghị)
               </button>
               <button type="button"
                 class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
-                x-on:click="excel.retryDelayMinutes = 30">
+                x-on:click="excel.retryDelayMinutes = 30; scheduleConfigSave();">
                 30 phút
               </button>
             </div>
@@ -303,6 +304,7 @@
                 const next = digitsOnly === '' ? '' : String(parseInt(digitsOnly, 10));
                 $event.target.value = next;
                 excel.taskDelaySeconds = next === '' ? null : Number(next);
+                scheduleConfigSave();
               " />
             <div class="flex flex-wrap items-center gap-2 pt-1">
               <span class="text-xs text-gray-400 mr-1">
@@ -310,22 +312,22 @@
               </span>
               <button type="button"
                 class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
-                x-on:click="excel.taskDelaySeconds = 0">
+                x-on:click="excel.taskDelaySeconds = 0; scheduleConfigSave();">
                 0s (Batch)
               </button>
               <button type="button"
                 class="px-2.5 py-1 rounded-full border border-indigo-200 text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
-                x-on:click="excel.taskDelaySeconds = 3">
+                x-on:click="excel.taskDelaySeconds = 3; scheduleConfigSave();">
                 3 giây (khuyến nghị)
               </button>
               <button type="button"
                 class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
-                x-on:click="excel.taskDelaySeconds = 5">
+                x-on:click="excel.taskDelaySeconds = 5; scheduleConfigSave();">
                 5 giây
               </button>
               <button type="button"
                 class="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-700 hover:bg-gray-50"
-                x-on:click="excel.taskDelaySeconds = 10">
+                x-on:click="excel.taskDelaySeconds = 10; scheduleConfigSave();">
                 10 giây
               </button>
             </div>
@@ -344,7 +346,9 @@
             </label>
             <textarea id="messageInput" rows="4"
               class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Nhập nhiều tin nhắn, phân cách bằng dấu | (ví dụ: Tin nhắn 1 | Tin nhắn 2 | Tin nhắn 3)" x-model="excel.message"></textarea>
+              placeholder="Nhập nhiều tin nhắn, phân cách bằng dấu | (ví dụ: Tin nhắn 1 | Tin nhắn 2 | Tin nhắn 3)" 
+              x-model="excel.message"
+              x-on:input="scheduleConfigSave()"></textarea>
             <p class="text-xs text-gray-400 mt-1">
               Nhập nhiều tin nhắn, phân cách bằng dấu <code class="bg-gray-100 px-1 rounded">|</code>. Hệ thống sẽ chọn ngẫu nhiên một tin nhắn cho mỗi người nhận. Nếu để trống, sẽ sử dụng tin nhắn mặc định.
             </p>
@@ -356,6 +360,7 @@
                   <input
                     type="checkbox"
                     x-model="excel.autoFriendRequest"
+                    x-on:change="scheduleConfigSave()"
                     class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
                   <span class="text-sm font-medium text-gray-700">
@@ -370,6 +375,7 @@
                     id="friendRequestMessageInput"
                     rows="2"
                     x-model="excel.friendRequestMessage"
+                    x-on:input="scheduleConfigSave()"
                     class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     placeholder="Xin chào! Tôi muốn kết bạn với bạn."
                   ></textarea>
@@ -395,8 +401,8 @@
             </p>
           </div>
 
-          <!-- Media Preview -->
-          <div x-show="excel.mediaFiles.length > 0" class="grid grid-cols-3 md:grid-cols-5 gap-2">
+             <!-- Media Preview -->
+             <div x-show="excel.mediaFiles.length > 0" class="grid grid-cols-3 md:grid-cols-5 gap-2">
               <template x-for="(file, index) in excel.mediaFiles" :key="index">
                 <div class="relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-50 p-1">
                   <div class="aspect-square flex items-center justify-center bg-gray-100 rounded text-xs">
@@ -418,7 +424,7 @@
                   </button>
                 </div>
               </template>
-          </div>
+            </div>
 
           <!-- File input -->
           <div class="space-y-1.5">
@@ -437,211 +443,211 @@
       </section>
 
       <section class="bg-white backdrop-blur rounded-2xl shadow-xl p-5 md:p-6 flex flex-col">
-         <!-- Actions -->
-         <div class="flex flex-wrap items-center gap-3 pt-1">
-          <button type="button"
-            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 shadow-md hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
-            x-on:click="processExcel" x-bind:disabled="excel.loading || isExcelSessionActive">
-            <span x-show="!excel.loading">📤 Bắt Đầu Xử Lý</span>
-            <span x-show="excel.loading">Đang xử lý...</span>
-          </button>
-
-          <button type="button"
-            class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
-            x-on:click="resetExcelForm" x-bind:disabled="excel.loading">
-            ❌ Xoá
-          </button>
-        </div>
-
-        <!-- Loading -->
-        <template x-if="excel.loading">
-          <div class="flex items-center gap-2 text-sm text-gray-500 pt-1">
-            <svg class="animate-spin h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none"
-              viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 00-8 8h4z">
-              </path>
-            </svg>
-            <span>Đang tải lên và xử lý file...</span>
-          </div>
-        </template>
-
-        <!-- Warning Banner -->
-        <template x-if="excel.warning">
-          <div class="mt-2 rounded-xl border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <div class="font-semibold mb-1">⚠️ Cảnh báo</div>
-            <div x-text="excel.warning"></div>
-          </div>
-        </template>
-
-        <!-- Progress -->
-        <div
-          x-show="excel.jobId && (excel.status === 'running' || excel.status === 'pending' || excel.status === 'paused' || excel.status === 'cancelled')"
-          class="pt-2 space-y-2">
-          <div class="flex items-center justify-between text-xs text-gray-500">
-            <span>
-              Tiến độ:
-              <span class="font-semibold text-gray-700" x-text="`${excel.processed}/${excel.totalPhones}`"></span>
-            </span>
-            <span
-              x-text="excel.totalPhones ? `${Math.floor((excel.processed / excel.totalPhones) * 100)}%` : '0%'"></span>
-          </div>
-          <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div class="h-full bg-indigo-600 transition-all"
-              x-bind:style="`width: ${excel.totalPhones ? (excel.processed / excel.totalPhones) * 100 : 0}%`"></div>
-          </div>
-          <div class="text-xs text-gray-500">
-            Đang xác minh:
-            <span class="font-mono text-gray-700" x-text="excel.currentPhone || 'Đang chuẩn bị...'"></span>
-          </div>
-
-          <!-- Control Buttons -->
-          <div class="flex flex-wrap items-center gap-2 pt-2">
-            <button x-show="excel.status === 'running'" type="button"
-              class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition"
-              x-on:click="pauseJob">
-              ⏸️ Tạm dừng
+          <!-- Actions -->
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <button type="button"
+              class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 shadow-md hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              x-on:click="processExcel" x-bind:disabled="excel.loading || isExcelSessionActive">
+              <span x-show="!excel.loading">📤 Bắt Đầu Xử Lý</span>
+              <span x-show="excel.loading">Đang xử lý...</span>
             </button>
-            <button x-show="excel.status === 'paused'" type="button"
-              class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition"
-              x-on:click="resumeJob">
-              ▶️ Tiếp tục
+
+            <button type="button"
+              class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              x-on:click="resetExcelForm" x-bind:disabled="excel.loading">
+              ❌ Xoá
             </button>
-            <button x-show="excel.status === 'running' || excel.status === 'paused'" type="button"
-              class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition"
-              x-on:click="cancelJob">
-              ⏹️ Dừng
-            </button>
+          </div>
+
+          <!-- Loading -->
+          <template x-if="excel.loading">
+            <div class="flex items-center gap-2 text-sm text-gray-500 pt-1">
+              <svg class="animate-spin h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 00-8 8h4z">
+                </path>
+              </svg>
+              <span>Đang tải lên và xử lý file...</span>
+            </div>
+          </template>
+
+          <!-- Warning Banner -->
+          <template x-if="excel.warning">
+            <div class="mt-2 rounded-xl border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <div class="font-semibold mb-1">⚠️ Cảnh báo</div>
+              <div x-text="excel.warning"></div>
+            </div>
+          </template>
+
+          <!-- Progress -->
+          <div
+            x-show="excel.jobId && (excel.status === 'running' || excel.status === 'pending' || excel.status === 'paused' || excel.status === 'cancelled')"
+            class="pt-2 space-y-2">
+            <div class="flex items-center justify-between text-xs text-gray-500">
+              <span>
+                Tiến độ:
+                <span class="font-semibold text-gray-700" x-text="`${excel.processed}/${excel.totalPhones}`"></span>
+              </span>
+              <span
+                x-text="excel.totalPhones ? `${Math.floor((excel.processed / excel.totalPhones) * 100)}%` : '0%'"></span>
+            </div>
+            <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-600 transition-all"
+                x-bind:style="`width: ${excel.totalPhones ? (excel.processed / excel.totalPhones) * 100 : 0}%`"></div>
+            </div>
+            <div class="text-xs text-gray-500">
+              Đang xác minh:
+              <span class="font-mono text-gray-700" x-text="excel.currentPhone || 'Đang chuẩn bị...'"></span>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="flex flex-wrap items-center gap-2 pt-2">
+              <button x-show="excel.status === 'running'" type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition"
+                x-on:click="pauseJob">
+                ⏸️ Tạm dừng
+              </button>
+              <button x-show="excel.status === 'paused'" type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition"
+                x-on:click="resumeJob">
+                ▶️ Tiếp tục
+              </button>
+              <button x-show="excel.status === 'running' || excel.status === 'paused'" type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition"
+                x-on:click="cancelJob">
+                ⏹️ Dừng
+              </button>
             <button x-show="excel.downloadUrl && (excel.status === 'running' || excel.status === 'paused' || excel.status === 'cancelled' || excel.status === 'completed')"
               type="button"
-              class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
+                class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
               x-on:click="downloadByUrl(excel.downloadUrl)">
-              📥 Tải file kết quả hiện tại
+                📥 Tải file kết quả hiện tại
             </button>
-          </div>
+            </div>
 
-          <!-- Countdown Timer for Auto-Resume -->
-          <div x-show="excel.status === 'paused' && excel.pausedUntil"
-            class="mt-3 rounded-xl border-l-4 border-amber-500 bg-amber-50 px-4 py-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-sm font-semibold text-amber-800">
-                  ⏸️ Đang tạm dừng do rate limit
+            <!-- Countdown Timer for Auto-Resume -->
+            <div x-show="excel.status === 'paused' && excel.pausedUntil"
+              class="mt-3 rounded-xl border-l-4 border-amber-500 bg-amber-50 px-4 py-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-sm font-semibold text-amber-800">
+                    ⏸️ Đang tạm dừng do rate limit
+                  </div>
+                  <div class="text-xs text-amber-700 mt-1">
+                    Hệ thống sẽ tự động tiếp tục sau:
+                  </div>
                 </div>
-                <div class="text-xs text-amber-700 mt-1">
-                  Hệ thống sẽ tự động tiếp tục sau:
+                <div class="text-right">
+                  <div class="text-2xl font-bold text-amber-800 font-mono" x-text="countdown.display">
+                    --:--
+                  </div>
+                  <div class="text-xs text-amber-600">
+                    còn lại
+                  </div>
                 </div>
               </div>
-              <div class="text-right">
-                <div class="text-2xl font-bold text-amber-800 font-mono" x-text="countdown.display">
-                  --:--
-                </div>
-                <div class="text-xs text-amber-600">
-                  còn lại
-                </div>
+              <div class="mt-2 flex items-center justify-between text-xs text-amber-700">
+                <span x-text="`Đã retry: ${excel.retryCount || 0} lần`"></span>
+                <button type="button"
+                  class="px-2 py-1 rounded bg-amber-200 text-amber-900 hover:bg-amber-300 transition text-xs font-medium"
+                  x-on:click="resumeJob">
+                  ▶️ Resume ngay
+                </button>
               </div>
             </div>
-            <div class="mt-2 flex items-center justify-between text-xs text-amber-700">
-              <span x-text="`Đã retry: ${excel.retryCount || 0} lần`"></span>
-              <button type="button"
-                class="px-2 py-1 rounded bg-amber-200 text-amber-900 hover:bg-amber-300 transition text-xs font-medium"
-                x-on:click="resumeJob">
-                ▶️ Resume ngay
-              </button>
-            </div>
           </div>
-        </div>
 
-        <!-- Error -->
-        <template x-if="excel.error">
-          <div class="mt-2 rounded-xl border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700"
-            x-text="excel.error"></div>
-        </template>
+          <!-- Error -->
+          <template x-if="excel.error">
+            <div class="mt-2 rounded-xl border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700"
+              x-text="excel.error"></div>
+          </template>
 
-        <!-- Result -->
-        <template x-if="excel.result">
-          <div
-            class="mt-2 rounded-xl border-l-4 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 space-y-2">
-            <div class="font-semibold">✅ Xử lý thành công!</div>
-            <div class="text-xs text-emerald-900/80">
-              Thống kê:
-            </div>
-            <ul class="grid grid-cols-2 gap-1 text-xs">
-              <li>
-                Tổng số:
-                <span class="font-semibold" x-text="excel.result.stats.total"></span>
-              </li>
-              <li>
-                Tìm thấy:
-                <span class="font-semibold" x-text="excel.result.stats.found"></span>
-              </li>
-              <li>
-                Không tìm thấy:
-                <span class="font-semibold" x-text="excel.result.stats.notFound"></span>
-              </li>
-              <li>
-                Gửi thành công:
-                <span class="font-semibold" x-text="excel.result.stats.sendMessageSuccess"></span>
-              </li>
-              <li>
-                Gửi thất bại:
-                <span class="font-semibold" x-text="excel.result.stats.sendMessageFailed"></span>
-              </li>
-              <li>
-                Lỗi khác:
-                <span class="font-semibold" x-text="excel.result.stats.error"></span>
-              </li>
-              <template x-if="excel.result.stats.friendRequestSent !== undefined || excel.result.stats.friendRequestFailed !== undefined">
+          <!-- Result -->
+          <template x-if="excel.result">
+            <div
+              class="mt-2 rounded-xl border-l-4 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 space-y-2">
+              <div class="font-semibold">✅ Xử lý thành công!</div>
+              <div class="text-xs text-emerald-900/80">
+                Thống kê:
+              </div>
+              <ul class="grid grid-cols-2 gap-1 text-xs">
                 <li>
-                  Gửi lời mời thành công:
-                  <span class="font-semibold" x-text="excel.result.stats.friendRequestSent || 0"></span>
+                  Tổng số:
+                  <span class="font-semibold" x-text="excel.result.stats.total"></span>
                 </li>
-              </template>
-              <template x-if="excel.result.stats.friendRequestSent !== undefined || excel.result.stats.friendRequestFailed !== undefined">
                 <li>
-                  Gửi lời mời thất bại:
-                  <span class="font-semibold" x-text="excel.result.stats.friendRequestFailed || 0"></span>
+                  Tìm thấy:
+                  <span class="font-semibold" x-text="excel.result.stats.found"></span>
                 </li>
-              </template>
-            </ul>
+                <li>
+                  Không tìm thấy:
+                  <span class="font-semibold" x-text="excel.result.stats.notFound"></span>
+                </li>
+                <li>
+                  Gửi thành công:
+                  <span class="font-semibold" x-text="excel.result.stats.sendMessageSuccess"></span>
+                </li>
+                <li>
+                  Gửi thất bại:
+                  <span class="font-semibold" x-text="excel.result.stats.sendMessageFailed"></span>
+                </li>
+                <li>
+                  Lỗi khác:
+                  <span class="font-semibold" x-text="excel.result.stats.error"></span>
+                </li>
+                <template x-if="excel.result.stats.friendRequestSent !== undefined || excel.result.stats.friendRequestFailed !== undefined">
+                  <li>
+                    Gửi lời mời thành công:
+                    <span class="font-semibold" x-text="excel.result.stats.friendRequestSent || 0"></span>
+                  </li>
+                </template>
+                <template x-if="excel.result.stats.friendRequestSent !== undefined || excel.result.stats.friendRequestFailed !== undefined">
+                  <li>
+                    Gửi lời mời thất bại:
+                    <span class="font-semibold" x-text="excel.result.stats.friendRequestFailed || 0"></span>
+                  </li>
+                </template>
+              </ul>
 
-            <div class="pt-2">
+              <div class="pt-2">
               <button type="button"
                 class="inline-flex items-center gap-2 text-sm font-medium text-indigo-700 hover:text-indigo-900 hover:underline"
                 x-on:click="downloadByUrl(excel.downloadUrl || excel.result.downloadUrl)">
-                📥 Tải file kết quả
+                  📥 Tải file kết quả
               </button>
+              </div>
             </div>
-          </div>
-        </template>
+          </template>
 
-        <!-- History -->
-        <div class="pt-3">
-          <div class="text-sm font-semibold text-gray-800">📂 Lịch sử file kết quả</div>
-          <div class="text-xs text-gray-500 mt-1">Danh sách các phiên xử lý Excel gần đây và file kết quả tương ứng.</div>
+          <!-- History -->
+          <div class="pt-3">
+            <div class="text-sm font-semibold text-gray-800">📂 Lịch sử file kết quả</div>
+            <div class="text-xs text-gray-500 mt-1">Danh sách các phiên xử lý Excel gần đây và file kết quả tương ứng.</div>
 
-          <div class="mt-2 space-y-2" x-show="excel.history && excel.history.length > 0">
-            <template x-for="item in excel.history" :key="item.id">
-              <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                <div class="min-w-0">
-                  <div class="text-xs text-gray-500">Job</div>
-                  <div class="text-xs font-mono text-gray-700 truncate" x-text="item.id"></div>
-                  <div class="text-xs text-gray-500 mt-0.5">
-                    Trạng thái: <span class="font-semibold text-gray-700" x-text="item.status"></span>
+            <div class="mt-2 space-y-2" x-show="excel.history && excel.history.length > 0">
+              <template x-for="item in excel.history" :key="item.id">
+                <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                  <div class="min-w-0">
+                    <div class="text-xs text-gray-500">Job</div>
+                    <div class="text-xs font-mono text-gray-700 truncate" x-text="item.id"></div>
+                    <div class="text-xs text-gray-500 mt-0.5">
+                      Trạng thái: <span class="font-semibold text-gray-700" x-text="item.status"></span>
+                    </div>
                   </div>
-                </div>
                 <button x-show="item.downloadUrl"
                   type="button"
-                  class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
+                    class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
                   x-on:click="downloadByUrl(item.downloadUrl)">
-                  📥 Tải xuống
+                    📥 Tải xuống
                 </button>
-              </div>
-            </template>
-          </div>
+                </div>
+              </template>
+            </div>
 
-          <div class="mt-2 text-xs text-gray-400" x-show="!excel.history || excel.history.length === 0">
-            Chưa có file kết quả nào.
+            <div class="mt-2 text-xs text-gray-400" x-show="!excel.history || excel.history.length === 0">
+              Chưa có file kết quả nào.
           </div>
         </div>
       </section>
@@ -932,6 +938,7 @@
         },
         pollTimer: null,
         countdownTimer: null, // NEW: Countdown interval
+        configSaveTimer: null, // Debounce timer for auto-saving config
         // NEW: Tab state
         activeTab: 'main', // 'main' | 'search'
         // NEW: User search state
@@ -976,6 +983,29 @@
               createdAt: now,
               lastUsedAt: now,
             });
+            // Initialize default config in separate storage
+            this.saveWorkspaceConfigRaw(legacyId, this.getDefaultConfig());
+          }
+          
+          // Migrate config from workspace.items to separate storage (optimization)
+          let needsSave = false;
+          this.workspace.items.forEach(ws => {
+            if (ws.config) {
+              // Migrate config to separate key
+              this.saveWorkspaceConfigRaw(ws.id, ws.config);
+              // Remove from workspace object to save space
+              delete ws.config;
+              needsSave = true;
+            } else {
+              // Ensure default config exists in separate storage
+              const configKey = `ws_config_${ws.id}`;
+              if (!localStorage.getItem(configKey)) {
+                this.saveWorkspaceConfigRaw(ws.id, this.getDefaultConfig());
+              }
+            }
+          });
+          if (needsSave && this.workspace.items.length > 0) {
+            this.persistWorkspaceState();
           }
 
           const currentId = localStorage.getItem("ws_current");
@@ -1033,11 +1063,15 @@
               name,
               createdAt: now,
               lastUsedAt: now,
+              // Config is stored separately in ws_config_${id}, not in workspace list
             });
             this.workspace.currentId = id;
             this.workspace.ready = true;
             this.persistWorkspaceState();
+            // Initialize default config for new workspace
+            this.saveWorkspaceConfigRaw(id, this.getDefaultConfig());
             this.resetWorkspaceStateForCurrent();
+            this.loadWorkspaceConfig();
             this.enterApp();
           } catch (e) {
             this.workspace.error = e?.message || "Không thể tạo workspace.";
@@ -1082,6 +1116,7 @@
             current.lastUsedAt = Date.now();
             this.persistWorkspaceState();
           }
+          this.loadWorkspaceConfig();
           this.refreshAll();
           this.loadExcelHistory();
         },
@@ -1093,6 +1128,94 @@
               (ws) => ws.id === this.workspace.currentId
             ) || null
           );
+        },
+
+        getDefaultConfig() {
+          return {
+            retryDelayMinutes: 20,
+            taskDelaySeconds: 3,
+            message: "Chào anh/chị 👋 Em xin phép được giới thiệu một sản phẩm/dịch vụ có thể phù hợp với anh/chị.",
+            autoFriendRequest: false,
+            friendRequestMessage: "Xin chào! Tôi muốn kết bạn với bạn.",
+            configCollapsed: true,
+          };
+        },
+
+        loadWorkspaceConfig() {
+          const ws = this.getCurrentWorkspace();
+          if (!ws || !ws.id) return;
+          
+          // Try to load from separate key first (optimized storage)
+          let config = null;
+          try {
+            const configKey = `ws_config_${ws.id}`;
+            const raw = localStorage.getItem(configKey);
+            if (raw) {
+              config = JSON.parse(raw);
+            }
+          } catch {
+            // ignore parse errors
+          }
+          
+          // Fallback: check if config exists in workspace object (migration from old format)
+          if (!config && ws.config) {
+            config = ws.config;
+            // Migrate to separate key
+            this.saveWorkspaceConfigRaw(ws.id, config);
+            // Remove from workspace object to save space
+            delete ws.config;
+            this.persistWorkspaceState();
+          }
+          
+          // Use default if no config found
+          if (!config) {
+            config = this.getDefaultConfig();
+          }
+          
+          this.excel.retryDelayMinutes = config.retryDelayMinutes ?? 20;
+          this.excel.taskDelaySeconds = config.taskDelaySeconds ?? 3;
+          this.excel.message = config.message || this.getDefaultConfig().message;
+          this.excel.autoFriendRequest = config.autoFriendRequest ?? false;
+          this.excel.friendRequestMessage = config.friendRequestMessage || this.getDefaultConfig().friendRequestMessage;
+          this.excel.configCollapsed = config.configCollapsed ?? true;
+        },
+
+        saveWorkspaceConfigRaw(workspaceId, config) {
+          // Save config to separate key (optimized - only update this workspace's config)
+          try {
+            const configKey = `ws_config_${workspaceId}`;
+            localStorage.setItem(configKey, JSON.stringify(config));
+          } catch {
+            // ignore storage errors (e.g., quota exceeded)
+          }
+        },
+
+        saveWorkspaceConfig() {
+          const ws = this.getCurrentWorkspace();
+          if (!ws || !ws.id) return;
+          
+          const config = {
+            retryDelayMinutes: this.excel.retryDelayMinutes ?? 20,
+            taskDelaySeconds: this.excel.taskDelaySeconds ?? 3,
+            message: this.excel.message || this.getDefaultConfig().message,
+            autoFriendRequest: this.excel.autoFriendRequest ?? false,
+            friendRequestMessage: this.excel.friendRequestMessage || this.getDefaultConfig().friendRequestMessage,
+            configCollapsed: this.excel.configCollapsed ?? true,
+          };
+          
+          // Save to separate key (optimized - no need to serialize entire workspace list)
+          this.saveWorkspaceConfigRaw(ws.id, config);
+        },
+
+        scheduleConfigSave() {
+          // Debounce config save to avoid too frequent localStorage writes
+          if (this.configSaveTimer) {
+            clearTimeout(this.configSaveTimer);
+          }
+          this.configSaveTimer = setTimeout(() => {
+            this.saveWorkspaceConfig();
+            this.configSaveTimer = null;
+          }, 500); // Save after 500ms of inactivity
         },
 
         currentWorkspaceName() {
@@ -1112,6 +1235,8 @@
             this.workspaceManagerOpen = false;
             return;
           }
+          // Save current workspace config before switching
+          this.saveWorkspaceConfig();
           const ws = this.workspace.items.find((w) => w.id === id);
           if (!ws) return;
           this.workspace.currentId = id;
@@ -1120,12 +1245,20 @@
           this.workspaceManagerOpen = false;
           this.persistWorkspaceState();
           this.resetWorkspaceStateForCurrent();
+          this.loadWorkspaceConfig();
           this.enterApp();
         },
 
         deleteWorkspace(id) {
           const index = this.workspace.items.findIndex((w) => w.id === id);
           if (index === -1) return;
+
+          // Delete config from separate storage
+          try {
+            localStorage.removeItem(`ws_config_${id}`);
+          } catch {
+            // ignore errors
+          }
 
           const isCurrent = id === this.workspace.currentId;
           this.workspace.items.splice(index, 1);
@@ -1148,6 +1281,7 @@
             this.workspaceManagerOpen = false;
             this.persistWorkspaceState();
             this.resetWorkspaceStateForCurrent();
+            this.loadWorkspaceConfig();
             this.enterApp();
           } else {
             this.persistWorkspaceState();
